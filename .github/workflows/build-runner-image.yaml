@@ -1,0 +1,71 @@
+on:
+  workflow_dispatch:
+    inputs:
+      runner-resource-group:
+        description: 'Resource Group for the runners'
+        type: string
+        default: 'rg-vmss-github-runner'
+        required: true
+      storage-account:
+        description: 'Storage Account'
+        type: string
+        default: 'stgithubrunnerdemo'
+        required: true
+      blob-container-name:
+        description: 'Blob Container Name'
+        type: string
+        default: 'system'
+        required: true
+      vnet:
+        description: 'Vnet used for the runners'
+        type: string
+        default: 'vnet-default'
+        required: true
+      subnet:
+        description: 'Subnet used for the runners'
+        type: string
+        default: 'snet-github-runners'
+        required: true
+      vnet-resource-group:
+        description: 'Resource Group for the vnet'
+        type: string
+        default: 'rg-vnet-default'
+        required: true
+
+name: VmssGithubRunner
+jobs:
+  build-runner-image
+    runs-on: self-hosted
+    steps:
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+
+    - name: Checkout virtual environments at latest official ubuntu20 tag
+      shell: pwsh
+      run: |
+        $tag = ((Invoke-RestMethod -Uri https://actionvirtualenvironmentsstatus.azurewebsites.net/api/status).data | Where-Object {$_.DisplayName -eq 'ubuntu20' -and $_.ImageVersion -ne "" }).ImageVersion | Sort-Object | Select-Object -Last 1
+        git clone https://github.com/actions/virtual-environments.git
+        Set-Location -Path "virtual-environments"
+        git checkout tags/ubuntu20/$tag
+
+
+    - name: Ensure storage account exists
+      shell: pwsh
+      run: |
+        az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurop
+        az storage account create --name ${{ github.event.inputs.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+
+    - name: Build image using Packer
+      shell: pwsh
+      run: |
+        ./scripts/build-image.ps1 -ResourcesNamePrefix ubuntu20 `
+                       -TemplatePath virtual-environments/images/linux/ubuntu2004.json `
+                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                       -StorageAccount ${{ github.event.inputs.storage-account }} `
+                       -Location westeurope `
+                       -VirtualNetworkName ${{ github.event.inputs.vnet }} `
+                       -VirtualNetworkRG ${{ github.event.inputs.vnet-resource-group }} `
+                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }}
