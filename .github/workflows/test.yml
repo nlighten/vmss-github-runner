@@ -61,6 +61,8 @@ jobs:
     - name: Build image using Packer
       shell: pwsh
       run: |
+        pwd
+        ls
         ./scripts/build-image.ps1 -ResourcesNamePrefix ubuntu20 `
                        -TemplatePath virtual-environments/images/linux/ubuntu2004.json `
                        -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
