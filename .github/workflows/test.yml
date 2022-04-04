@@ -37,6 +37,7 @@ jobs:
   build-runner-image:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v3
     - name: Azure Login
       uses: azure/login@v1
       with:
@@ -61,7 +62,7 @@ jobs:
     - name: Build image using Packer
       shell: pwsh
       run: |
-        pwd
+        #pwd
         ls
         # ./scripts/build-image.ps1 -ResourcesNamePrefix ubuntu20 `
         #                -TemplatePath virtual-environments/images/linux/ubuntu2004.json `
