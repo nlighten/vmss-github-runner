@@ -1,15 +1,14 @@
 [CmdletBinding()]
 param(
-    [String] [Parameter (Mandatory = $true)] $TemplatePath,
-    [String] [Parameter (Mandatory = $true)] $ResourcesNamePrefix,
-    [String] [Parameter (Mandatory = $true)] $Location,
-    [String] [Parameter (Mandatory = $true)] $ResourceGroup,
-    [String] [Parameter (Mandatory = $true)] $StorageAccount,
-    [String] [Parameter (Mandatory = $true)] $SubscriptionId,
-    [String] [Parameter (Mandatory = $true)] $VirtualNetworkName,
-    [String] [Parameter (Mandatory = $true)] $VirtualNetworkRG,
-    [String] [Parameter (Mandatory = $true)] $VirtualNetworkSubnet,
-    [Bool] [Parameter (Mandatory = $false)] $useAzureCliLogin = $true
+    [String] [Parameter (Mandatory = $true)]  $TemplatePath,
+    [String] [Parameter (Mandatory = $true)]  $ResourcesNamePrefix,
+    [String] [Parameter (Mandatory = $true)]  $Location,
+    [String] [Parameter (Mandatory = $true)]  $ResourceGroup,
+    [String] [Parameter (Mandatory = $true)]  $StorageAccount,
+    [String] [Parameter (Mandatory = $true)]  $VirtualNetworkName,
+    [String] [Parameter (Mandatory = $true)]  $VirtualNetworkRG,
+    [String] [Parameter (Mandatory = $true)]  $VirtualNetworkSubnet,
+    [Bool]   [Parameter (Mandatory = $false)] $useAzureCliLogin = $true
 )
 
 if (-not (Test-Path $TemplatePath)) {
