@@ -63,11 +63,11 @@ jobs:
       run: |
         pwd
         ls
-        ./scripts/build-image.ps1 -ResourcesNamePrefix ubuntu20 `
-                       -TemplatePath virtual-environments/images/linux/ubuntu2004.json `
-                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
-                       -StorageAccount ${{ github.event.inputs.storage-account }} `
-                       -Location westeurope `
-                       -VirtualNetworkName ${{ github.event.inputs.vnet }} `
-                       -VirtualNetworkRG ${{ github.event.inputs.vnet-resource-group }} `
-                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }}
+        # ./scripts/build-image.ps1 -ResourcesNamePrefix ubuntu20 `
+        #                -TemplatePath virtual-environments/images/linux/ubuntu2004.json `
+        #                -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+        #                -StorageAccount ${{ github.event.inputs.storage-account }} `
+        #                -Location westeurope `
+        #                -VirtualNetworkName ${{ github.event.inputs.vnet }} `
+        #                -VirtualNetworkRG ${{ github.event.inputs.vnet-resource-group }} `
+        #                -VirtualNetworkSubnet ${{ github.event.inputs.subnet }}
