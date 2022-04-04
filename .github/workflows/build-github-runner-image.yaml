@@ -35,7 +35,7 @@ on:
 name: VmssGithubRunner
 jobs:
   build-runner-image:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
     - name: Azure Login
       uses: azure/login@v1
