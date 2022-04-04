@@ -34,7 +34,7 @@ on:
 
 name: VmssGithubRunner
 jobs:
-  build-runner-image
+  build-runner-image:
     runs-on: self-hosted
     steps:
     - name: Azure Login
