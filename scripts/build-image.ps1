@@ -52,7 +52,7 @@ packer build    -var "capture_name_prefix=$ResourcesNamePrefix" `
                 -var "virtual_network_name=$VirtualNetworkName" `
                 -var "virtual_network_resource_group_name=$VirtualNetworkRG" `
                 -var "virtual_network_subnet_name=$VirtualNetworkSubnet" `
-                -var "private_virtual_network_with_public_ip=false" `
+                -var "private_virtual_network_with_public_ip=true" `
                 -var "run_validation_diskspace=$env:RUN_VALIDATION_FLAG" `
                 $TemplatePath `
             | Where-Object {
