@@ -119,7 +119,7 @@ jobs:
         STORAGE_ACCOUNT: ${{ github.event.inputs.storage-account }}
         QUEUE_NAME: ${{ github.event.inputs.vmss-name }}
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
-        GITHUB_PAT: $${{ secrets.GITHUB_PAT }}
+        GITHUB_PAT: $${{ secrets.RUNNER_PAT }}
         LABELS: foo,bar
 
     - name: Create VMSS 
