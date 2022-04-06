@@ -69,7 +69,8 @@ $Vmss = (az vmss create `
 
 az identity create --resource-group $ResourceGroup --name "id-$VmssName"
 
-az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities "id-$VmssName" --role "Virtual Machine Contributor" --scope $Vmss.id
+$Vmss
+Write-Output "az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName --role 'Virtual Machine Contributor' --scope $Vmss.id"
 
 
 
