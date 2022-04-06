@@ -50,7 +50,7 @@ $SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-
 
 
 # Create the scale set
-$Vmss = (az vmss create `
+$VmssId = az vmss create `
             --resource-group $ResourceGroup `
             --name $VmssName `
             --image $Image.id `
@@ -65,12 +65,18 @@ $Vmss = (az vmss create `
             --subnet $SubnetId `
             --load-balancer '""' `
             --disable-overprovision `
-            --location westeurope | ConvertFrom-JSON)
+            --location westeurope --query id -o tsv
 
-az identity create --resource-group $ResourceGroup --name "id-$VmssName"
+$IdentityPrincipalId = az identity create --resource-group $ResourceGroup --name "id-$VmssName" --query principalId
+$StorageAccountId = az storage account show --name $StorageAccount --query id -o tsv
 
-$Vmss
-Write-Output "az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName --role 'Virtual Machine Contributor' --scope $Vmss.id"
+
+az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName 
+
+
+az role assignment create --role 'Virtual Machine Contributor' --scope $VmssId --assignee-object-id $IdentityPrincipalId
+az role assignment create --role 'Storage Queue Data Contributor' --scope $StorageAccountId --assignee-object-id $IdentityPrincipalId
+
 
 
 
