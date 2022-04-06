@@ -50,7 +50,7 @@ $Vmss = az vmss create `
             --custom-data ./config/cloud-config.yaml `
             --vnet-name $VirtualNetworkName `
             --subnet $VirtualNetworkSubnet `
-            --load-balancer "" `
+            --load-balancer '""' `
             --disable-overprovision `
             --location westeurope
 
