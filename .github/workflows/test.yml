@@ -112,7 +112,7 @@ jobs:
     - name: Create VMSS 
       shell: bash
       run: |
-        envsubst < config/cloud-config.yaml.template > config/cloud-config.yaml
+        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$LABELS'< config/cloud-config.yaml.template > config/cloud-config.yaml
       env:
         VMSS: ${{ github.event.inputs.vmss-name }}
         RESOURCE_GROUP: ${{ github.event.inputs.runner-resource-group }}
