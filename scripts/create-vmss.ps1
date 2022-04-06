@@ -50,7 +50,7 @@ $SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-
 
 
 # Create the scale set
-$Vmss = az vmss create `
+$Vmss = (az vmss create `
             --resource-group $ResourceGroup `
             --name $VmssName `
             --image $Image.id `
@@ -65,11 +65,11 @@ $Vmss = az vmss create `
             --subnet $SubnetId `
             --load-balancer '""' `
             --disable-overprovision `
-            --location westeurope
+            --location westeurope | ConvertFrom-JSON)
 
 az identity create --resource-group $ResourceGroup --name "id-$VmssName"
 
-az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities "id-$VmssName" --role "Virtual Machine Contributor" 
+az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities "id-$VmssName" --role "Virtual Machine Contributor" --scope $Vmss.id
 
 
 
