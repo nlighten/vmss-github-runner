@@ -42,6 +42,7 @@ if ($DateQuery.Equals("latest")) {
     $Query = "[?contains(name,'$ImageDisplayName')&&contains(name,'$DateQuery')].{name:name, id:id}"
 }
 $Image = (az image list --resource-group $ResourceGroup --query "$Query" | ConvertFrom-JSON | Sort-Object -Property name | Select-Object -Last 1)
+$SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-group $ResourceGroup --vnet-name $VirtualNetworkName --query id -o tsv 
 
 # Create the scale set
 $Vmss = az vmss create `
@@ -56,8 +57,7 @@ $Vmss = az vmss create `
             --max-price -1 `
             --instance-count 1 `
             --custom-data ./config/cloud-config.yaml `
-            --vnet-name $VirtualNetworkName `
-            --subnet $VirtualNetworkSubnet `
+            --subnet $SubnetId `
             --load-balancer '""' `
             --disable-overprovision `
             --location westeurope
