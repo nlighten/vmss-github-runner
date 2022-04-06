@@ -70,11 +70,11 @@ jobs:
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
 
 
-    - name: Ensure storage account and blob container exists
-      shell: pwsh
-      run: |
-        az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
-        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+    # - name: Ensure storage account and blob container exists
+    #   shell: pwsh
+    #   run: |
+    #     az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
+    #     az storage container create --name ${{ env.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
 
 
     # - name: Build image using Packer
@@ -92,23 +92,24 @@ jobs:
     #                    -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
     #                    -Location westeurope `
 
-    - name: Create VM image from Disk image
-      if: ${{ github.event.inputs.build-image }}
-      shell: pwsh
-      run: |
-        ./scripts/create-vm-image.ps1 `
-                      -StorageAccount ${{ github.event.inputs.storage-account }} `
-                      -ContainerName ${{ env.blob-container-name }} `
-                      -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
-                      -ImageDisplayName ${{ env.image-display-name }} `
-                      -DateQuery latest
+    # - name: Create VM image from Disk image
+    #   if: ${{ github.event.inputs.build-image }}
+    #   shell: pwsh
+    #   run: |
+    #     ./scripts/create-vm-image.ps1 `
+    #                   -StorageAccount ${{ github.event.inputs.storage-account }} `
+    #                   -ContainerName ${{ env.blob-container-name }} `
+    #                   -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+    #                   -ImageDisplayName ${{ env.image-display-name }} `
+    #                   -DateQuery latest
 
     - name: Create VMSS 
-      #if: ${{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
         ./scripts/create-vmss.ps1 `
                       -Vmss ${{ github.event.inputs.vmss-name }} `
+                      -User ${{ secrets.VMSS_USER }}
+                      -Password ${{ secrets.VMSS_PASSWORD }}
                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
                       -ImageDisplayName ${{ env.image-display-name }} `
                       -VirtualNetworkName ${{ github.event.inputs.vnet }} `

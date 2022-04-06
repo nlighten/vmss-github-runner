@@ -6,6 +6,14 @@ param (
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
+    [string] $Password,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string] $User,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string] $VirtualNetworkName,
 
     [Parameter(Mandatory = $true)]
@@ -40,8 +48,8 @@ $Vmss = az vmss create `
             --resource-group $ResourceGroup `
             --name $VmssName `
             --image $Image.id `
-            --admin-username ghrunner `
-            --admin-password PswPsw123 `
+            --admin-username $User `
+            --admin-password $Password `
             --authentication-type password `
             --priority Spot `
             --eviction-policy Delete `
