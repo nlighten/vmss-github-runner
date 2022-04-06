@@ -74,7 +74,7 @@ jobs:
       shell: pwsh
       run: |
         az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
-        az storage container create --name ${{ github.event.inputs.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
 
 
     # - name: Build image using Packer
