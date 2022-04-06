@@ -8,7 +8,9 @@ param(
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkName,
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkRG,
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkSubnet,
-    [Bool]   [Parameter (Mandatory = $false)] $useAzureCliLogin = $true
+    [Bool]   [Parameter (Mandatory = $false)] $UsePublicIp = $false,
+    [Bool]   [Parameter (Mandatory = $false)] $UseAzureCliLogin = $true,
+    [Int] [Parameter(Mandatory = $false)] $MaxRetries = 1
 )
 
 if (-not (Test-Path $TemplatePath)) {
@@ -36,30 +38,35 @@ Write-Host "Show Packer Version"
 packer --version
 
 
-if ($useAzureCliLogin) {
+if ($UseAzureCliLogin) {
     # We replace the client_id builder parameters and force to use azure cli instead.
     ((Get-Content -path $TemplatePath -Raw) -replace '"client_id": "{{user `client_id`}}",', '"use_azure_cli_auth": true,') | Set-Content -Path $TemplatePath
 }
 
 # Build image with packer
 Write-Host "Build $Image VM"
-packer build    -var "capture_name_prefix=$ResourcesNamePrefix" `
-                -var "install_password=$InstallPassword" `
-                -var "location=$Location" `
-                -var "resource_group=$ResourceGroup" `
-                -var "storage_account=$StorageAccount" `
-                -var "temp_resource_group_name=$TempResourceGroupName" `
-                -var "virtual_network_name=$VirtualNetworkName" `
-                -var "virtual_network_resource_group_name=$VirtualNetworkRG" `
-                -var "virtual_network_subnet_name=$VirtualNetworkSubnet" `
-                -var "private_virtual_network_with_public_ip=true" `
-                -var "run_validation_diskspace=$env:RUN_VALIDATION_FLAG" `
-                $TemplatePath `
-            | Where-Object {
-                #Filter sensitive data from Packer logs
-                $currentString = $_
-                $sensitiveString = $SensitiveData | Where-Object { $currentString -match $_ }
-                $sensitiveString -eq $null
-            }
-
-
+$withPublicIp = if ($UsePublicIp) { "true" } else { "false" }
+$exitCode = 888
+$retries = 0
+while ($exitCode -ne 0 -and $retries -lt $MaxRetries) {
+    $(& packer build `
+        -var "capture_name_prefix=$ResourcesNamePrefix" `
+        -var "install_password=$InstallPassword" `
+        -var "location=$Location" `
+        -var "resource_group=$ResourceGroup" `
+        -var "storage_account=$StorageAccount" `
+        -var "temp_resource_group_name=$TempResourceGroupName" `
+        -var "virtual_network_name=$VirtualNetworkName" `
+        -var "virtual_network_resource_group_name=$VirtualNetworkRG" `
+        -var "virtual_network_subnet_name=$VirtualNetworkSubnet" `
+        -var "private_virtual_network_with_public_ip=$withPublicIp" `
+        -var "run_validation_diskspace=false" `
+        $TemplatePath ; $exitCode=$LASTEXITCODE `
+    | Where-Object {
+        #Filter sensitive data from Packer logs
+        $currentString = $_
+        $sensitiveString = $SensitiveData | Where-Object { $currentString -match $_ }
+        $sensitiveString -eq $null
+    })
+    $retries++
+}

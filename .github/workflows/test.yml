@@ -31,6 +31,28 @@ on:
         type: string
         default: 'rg-vnet-default'
         required: true
+      use-public-ip-for-image-build:
+        description: 'Use a public ip-address for image build?'
+        type: boolean
+        default: false
+        required: true
+      build-image:
+        description: 'Build the image?'
+        type: boolean
+        default: false
+        required: true
+      image-display-name:
+        description: 'Display name as returned by https://actionvirtualenvironmentsstatus.azurewebsites.net/api/status'
+        type: string
+        default: ubuntu20
+        required: true
+      image-template-path:
+        description: 'Packer template path inside virtual environments repo for given image-display-name'
+        type: string
+        default: /images/linux/ubuntu2004.json
+        required: true
+
+
 
 name: VmssGithubRunner
 jobs:
@@ -44,31 +66,42 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
 
-    - name: Checkout virtual environments at latest official ubuntu20 tag
+    - name: Checkout virtual environments at latest official ${{ github.event.inputs.image-display-name }} tag
+      if: {{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
-        $tag = ((Invoke-RestMethod -Uri https://actionvirtualenvironmentsstatus.azurewebsites.net/api/status).data | Where-Object {$_.DisplayName -eq 'ubuntu20' -and $_.ImageVersion -ne "" }).ImageVersion | Sort-Object | Select-Object -Last 1
-        git clone https://github.com/actions/virtual-environments.git
-        Set-Location -Path "virtual-environments"
-        git checkout tags/ubuntu20/$tag
+        ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ github.event.inputs.image-display-name }}
 
 
-    # - name: Ensure storage account and blob container exists
-    #   shell: pwsh
-    #   run: |
-    #     az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
-    #     az storage container create --name ${{ github.event.inputs.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+    - name: Ensure storage account and blob container exists
+      shell: pwsh
+      run: |
+        az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
+        az storage container create --name ${{ github.event.inputs.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+
 
     - name: Build image using Packer
+      if: {{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
-        #pwd
-        #ls
-        ./scripts/build-image.ps1 -ResourcesNamePrefix ubuntu20 `
+        ./scripts/build-disk-image.ps1 `
+                       -ResourcesNamePrefix ${{ github.event.inputs.image-display-name }} `
                        -TemplatePath virtual-environments/images/linux/ubuntu2004.json `
                        -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
                        -StorageAccount ${{ github.event.inputs.storage-account }} `
-                       -Location westeurope `
+                       -UsePublicIp ${{ github.event.inputs.use-public-ip-for-image-build }}
                        -VirtualNetworkName ${{ github.event.inputs.vnet }} `
                        -VirtualNetworkRG ${{ github.event.inputs.vnet-resource-group }} `
-                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }}
+                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
+                       -Location westeurope `
+
+    - name: Create VM image from Disk image
+      if: {{ github.event.inputs.build-image }}
+      shell: pwsh
+      run: |
+        ./scripts/create-vm-image.ps1 `
+                      -StorageAccount ${{ github.event.inputs.storage-account }} `
+                      -ContainerName ${{ github.event.inputs.blob-container-name }} `
+                      -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                      -ImageDisplayName ${{ github.event.inputs.image-display-name }} `
+                      -DateQuery latest
