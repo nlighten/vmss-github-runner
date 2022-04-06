@@ -8,9 +8,9 @@ param(
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkName,
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkRG,
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkSubnet,
-    [Bool]   [Parameter (Mandatory = $false)] $UsePublicIp = $false,
+    [String] [Parameter (Mandatory = $false)] $UsePublicIp = "false",
     [Bool]   [Parameter (Mandatory = $false)] $UseAzureCliLogin = $true,
-    [Int] [Parameter(Mandatory = $false)] $MaxRetries = 1
+    [Int]    [Parameter(Mandatory = $false)]  $MaxRetries = 1
 )
 
 if (-not (Test-Path $TemplatePath)) {
@@ -45,7 +45,6 @@ if ($UseAzureCliLogin) {
 
 # Build image with packer
 Write-Host "Build $Image VM"
-$withPublicIp = if ($UsePublicIp) { "true" } else { "false" }
 $exitCode = 888
 $retries = 0
 while ($exitCode -ne 0 -and $retries -lt $MaxRetries) {
@@ -59,7 +58,7 @@ while ($exitCode -ne 0 -and $retries -lt $MaxRetries) {
         -var "virtual_network_name=$VirtualNetworkName" `
         -var "virtual_network_resource_group_name=$VirtualNetworkRG" `
         -var "virtual_network_subnet_name=$VirtualNetworkSubnet" `
-        -var "private_virtual_network_with_public_ip=$withPublicIp" `
+        -var "private_virtual_network_with_public_ip=$UsePublicIp" `
         -var "run_validation_diskspace=false" `
         $TemplatePath ; $exitCode=$LASTEXITCODE `
     | Where-Object {
