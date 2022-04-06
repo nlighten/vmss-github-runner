@@ -11,11 +11,6 @@ on:
         type: string
         default: 'stgithubrunnerdemo'
         required: true
-      blob-container-name:
-        description: 'Blob Container Name'
-        type: string
-        default: 'system'
-        required: true
       vnet:
         description: 'Vnet used for the runners'
         type: string
@@ -41,22 +36,17 @@ on:
         type: boolean
         default: false
         required: true
-      image-display-name:
-        description: 'Display name as returned by https://actionvirtualenvironmentsstatus.azurewebsites.net/api/status'
-        type: string
-        default: ubuntu20
-        required: true
-      image-template-path:
-        description: 'Packer template path inside virtual environments repo for given image-display-name'
-        type: string
-        default: /images/linux/ubuntu2004.json
-        required: true
       vmss-name:
         description: 'Name of the scale-set for the github runners'
         type: string
         default: vmss-github-runners-001
         required: true
 
+
+env:
+  blob-container-name: system
+  image-display-name: ubuntu20
+  image-template-path: /images/linux/ubuntu2004.json
 
 
 name: VmssGithubRunner
@@ -73,11 +63,11 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
 
-    - name: Checkout virtual environments at latest official ${{ github.event.inputs.image-display-name }} tag
+    - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag
       if: ${{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
-        ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ github.event.inputs.image-display-name }}
+        ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
 
 
     - name: Ensure storage account and blob container exists
@@ -92,8 +82,8 @@ jobs:
     #   shell: pwsh
     #   run: |
     #     ./scripts/build-disk-image.ps1 `
-    #                    -ResourcesNamePrefix ${{ github.event.inputs.image-display-name }} `
-    #                    -TemplatePath virtual-environments/images/linux/ubuntu2004.json `
+    #                    -ResourcesNamePrefix ${{ env.image-display-name }} `
+    #                    -TemplatePath ${{ env.image-template-path }} `
     #                    -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
     #                    -StorageAccount ${{ github.event.inputs.storage-account }} `
     #                    -UsePublicIp ${{ github.event.inputs.use-public-ip-for-image-build }}
@@ -108,9 +98,9 @@ jobs:
       run: |
         ./scripts/create-vm-image.ps1 `
                       -StorageAccount ${{ github.event.inputs.storage-account }} `
-                      -ContainerName ${{ github.event.inputs.blob-container-name }} `
+                      -ContainerName ${{ env.blob-container-name }} `
                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
-                      -ImageDisplayName ${{ github.event.inputs.image-display-name }} `
+                      -ImageDisplayName ${{ env.image-display-name }} `
                       -DateQuery latest
 
     - name: Create VMSS 
@@ -120,7 +110,7 @@ jobs:
         ./scripts/create-vmss.ps1 `
                       -Vmss ${{ github.event.inputs.vmss-name }} `
                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
-                      -ImageDisplayName ${{ github.event.inputs.image-display-name }} `
+                      -ImageDisplayName ${{ env.image-display-name }} `
                       -VirtualNetworkName ${{ github.event.inputs.vnet }} `
                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
                       -DateQuery latest
