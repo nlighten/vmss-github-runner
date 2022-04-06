@@ -128,6 +128,7 @@ jobs:
       run: |
         ./scripts/create-vmss.ps1 `
                       -Vmss ${{ github.event.inputs.vmss-name }} `
+                      -StorageAccount ${{ github.event.inputs.storage-account }} `
                       -User ${{ secrets.VMSS_USER }} `
                       -Password ${{ secrets.VMSS_PASSWORD }} `
                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `

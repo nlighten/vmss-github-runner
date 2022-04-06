@@ -6,6 +6,10 @@ param (
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
+    [string] $StorageAccount,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string] $Password,
 
     [Parameter(Mandatory = $true)]
@@ -75,7 +79,7 @@ az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --iden
 
 
 az role assignment create --role 'Virtual Machine Contributor' --scope $VmssId --assignee-object-id $IdentityPrincipalId
-az role assignment create --role 'Storage Queue Data Contributor' --scope $StorageAccountId --assignee-object-id $IdentityPrincipalId
+az role assignment create --role     --scope $StorageAccountId --assignee-object-id $IdentityPrincipalId
 
 
 
