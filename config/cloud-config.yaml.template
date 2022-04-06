@@ -62,4 +62,4 @@
     - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh install 
     - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh start
     - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh status
-    - chown -R ghrunner /actions-runner
+    - chown -R $USER_NAME /actions-runner
