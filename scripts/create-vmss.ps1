@@ -22,6 +22,10 @@ param (
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
+    [string] $NetworkResourceGroup,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string] $ResourceGroup,
 
     [Parameter(Mandatory = $true)]
@@ -42,7 +46,7 @@ if ($DateQuery.Equals("latest")) {
     $Query = "[?contains(name,'$ImageDisplayName')&&contains(name,'$DateQuery')].{name:name, id:id}"
 }
 $Image = (az image list --resource-group $ResourceGroup --query "$Query" | ConvertFrom-JSON | Sort-Object -Property name | Select-Object -Last 1)
-$SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-group $ResourceGroup --vnet-name $VirtualNetworkName --query id -o tsv 
+$SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-group $NetworkResourceGroup --vnet-name $VirtualNetworkName --query id -o tsv 
 
 # Create the scale set
 $Vmss = az vmss create `

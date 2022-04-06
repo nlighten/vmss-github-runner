@@ -114,4 +114,5 @@ jobs:
                       -ImageDisplayName ${{ env.image-display-name }} `
                       -VirtualNetworkName ${{ github.event.inputs.vnet }} `
                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
+                      -NetworkResourceGroup ${{ github.event.inputs.vnet-resource-group }} `
                       -DateQuery latest
