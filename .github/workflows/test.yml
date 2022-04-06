@@ -41,6 +41,11 @@ on:
         type: string
         default: vmss-github-runners-001
         required: true
+      github-repo:
+        description: 'Name of the github repo where runners should be registered'
+        type: string
+        default: nlighten/vmss-github-runner
+        required: true
 
 
 env:
@@ -102,6 +107,20 @@ jobs:
     #                   -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
     #                   -ImageDisplayName ${{ env.image-display-name }} `
     #                   -DateQuery latest
+
+
+    - name: Create VMSS 
+      shell: bash
+      run: |
+        envsubst < config/cloud-config.yaml.template > config/cloud-config.yaml
+      env:
+        VMSS: ${{ github.event.inputs.vmss-name }}
+        RESOURCE_GROUP: ${{ github.event.inputs.runner-resource-group }}
+        STORAGE_ACCOUNT: ${{ github.event.inputs.storage-account }}
+        QUEUE_NAME: ${{ github.event.inputs.vmss-name }}
+        GITHUB_REPO: ${{ github.event.inputs.github-repo }}
+        GITHUB_PAT: $${{ secrets.GITHUB_PAT }}
+        LABELS: foo,bar
 
     - name: Create VMSS 
       shell: pwsh
