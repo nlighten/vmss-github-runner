@@ -1,0 +1,80 @@
+  #cloud-config:
+  package_update: true
+  package_upgrade: true
+
+
+  write_files:
+    - path: /hooks/job-started.sh
+      permissions: "0555"
+      content: |
+        az login --identity --output none     
+        # protect instance for scale in
+        VMSS=$(az vmss list --query [].name -o tsv)
+        RESOURCE_GROUP=$(az vmss list --query [].resourceGroup -o tsv)               
+        INSTANCE_ID=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?osProfile.computerName == '$(hostname)'].instanceId" -o tsv)
+        #az vmss update --name $VMSS --resource-group $RESOURCE_GROUP  --instance-id $INSTANCE_ID --protect-from-scale-in true
+        # add message to the queue 
+        MESSAGE=$(az storage message put --queue-name activerunners --content "$(hostname)" --account-name scaletestdev010 --time-to-live 3600 --timeout 10 --only-show-errors)
+        MESSAGE_ID=$(echo $MESSAGE | jq -r '.id')
+        POP_RECEIPT=$(echo $MESSAGE | jq -r '.popReceipt')
+        echo "MESSAGE_ID=$MESSAGE_ID" > /actions-runner/.registration
+        echo "POP_RECEIPT=$POP_RECEIPT" >> /actions-runner/.registration
+        # scale up if needed
+        PERCENT_TARGET_AVAILABLE_RUNNERS=25
+        ACTIVE_RUNNERS=$(az storage message peek --queue-name activerunners --account-name scaletestdev010 --num-messages 32 --only-show-errors | jq '. | length')
+        CURRENT_NON_FAILED_RUNNERS=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?provisioningState != 'Failed']" | jq '. | length')
+        TARGET_NON_FAILED_RUNNERS=$(( ((100+$PERCENT_TARGET_AVAILABLE_RUNNERS)*$ACTIVE_RUNNERS+99)/100 ))
+        if [ "$TARGET_NON_FAILED_RUNNERS" -gt "$CURRENT_NON_FAILED_RUNNERS" ]; then
+          CURRENT_FAILED_RUNNERS=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?provisioningState == 'Failed']" | jq '. | length')
+          TARGET_RUNNERS=$(( ($TARGET_NON_FAILED_RUNNERS + $CURRENT_FAILED_RUNNERS) ))
+          echo "Scaling up VMSS $VMSS to $TARGET_RUNNERS instances (current_runners=$CURRENT_NON_FAILED_RUNNERS, target_runners=$TARGET_NON_FAILED_RUNNERS)."
+          az vmss scale --name $VMSS --resource-group $RESOURCE_GROUP --new-capacity $TARGET_RUNNERS --no-wait
+        else
+          echo "No need to scale up VMSS $VMSS (current_runners=$CURRENT_NON_FAILED_RUNNERS, target_runners=$TARGET_NON_FAILED_RUNNERS)."                
+        fi
+        az logout
+                                                
+    - path: /hooks/job-completed.sh
+      permissions: "0555"
+      content: |
+        source /actions-runner/.registration
+        az login --identity --output none                                                                                                                                 
+        VMSS=$(az vmss list --query [].name -o tsv)
+        RESOURCE_GROUP=$(az vmss list --query [].resourceGroup -o tsv)               
+        INSTANCE_ID=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?osProfile.computerName == '$(hostname)'].instanceId" -o tsv)
+        # remove a message from queue
+        az storage message delete --queue-name activerunners --account-name scaletestdev010 --id $MESSAGE_ID --pop-receipt $POP_RECEIPT --timeout 10 --only-show-errors
+        # decide to either reimage or delete the instance
+        PERCENT_TARGET_AVAILABLE_RUNNERS=25
+        ACTIVE_RUNNERS=$(az storage message peek --queue-name activerunners --account-name scaletestdev010 --num-messages 32 --only-show-errors | jq '. | length')
+        CURRENT_NON_FAILED_RUNNERS=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?provisioningState != 'Failed']" | jq '. | length')
+        TARGET_NON_FAILED_RUNNERS=$(( ((100+$PERCENT_TARGET_AVAILABLE_RUNNERS)*$ACTIVE_RUNNERS+99)/100 ))
+        if [ "$TARGET_NON_FAILED_RUNNERS" -lt "$CURRENT_NON_FAILED_RUNNERS" ]; then
+          echo "Deleting instance $INSTANCE_ID with hostname $(hostname) from VMSS $VMSS due to excess capacity (current_runners=$CURRENT_NON_FAILED_RUNNERS, target_runners=$TARGET_NON_FAILED_RUNNERS)."
+          az vmss delete-instances --name $VMSS --resource-group $RESOURCE_GROUP --instance-ids $INSTANCE_ID --no-wait        
+        else
+          echo "Reimaging instance $INSTANCE_ID with hostname $(hostname) from VMSS $VMSS to keep capacity (current_runners=$CURRENT_NON_FAILED_RUNNERS, target_runners=$TARGET_NON_FAILED_RUNNERS)."
+          az vmss reimage --name $VMSS --resource-group $RESOURCE_GROUP --instance-id $INSTANCE_ID --no-wait
+        fi
+
+   
+   
+   
+      
+  # runcmd:
+    # Thanks to https://developer.github.com/v3/actions/self-hosted-runners/ for the GitHub API stuff
+    # - 'RUNNERTOKEN=$(curl -s -XPOST -H "authorization: token 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" https://api.github.com/repos/nlighten/temp/actions/runners/registration-token | jq -r .token)'
+    # - curl -s -O -L https://github.com/actions/runner/releases/download/v2.289.2/actions-runner-linux-x64-2.289.2.tar.gz
+    # - tar xzf ./actions-runner-linux-x64-2.289.2.tar.gz
+    # - echo "ACTIONS_RUNNER_HOOK_JOB_STARTED=/hooks/job-started.sh" >> /actions-runner/.env
+    # - echo "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/hooks/job-completed.sh" >> /actions-runner/.env
+    # # I need to put RUNNER_ALLOW_RUNASROOT=1 to allow the below to run as root (because that's what happens since the runner is configured & run as part of cloud-init)
+    # # The ghrunner user is not really used except for me to SSH into it if needed
+    # - RUNNER_ALLOW_RUNASROOT=1 ./config.sh --url https://github.com/nlighten/temp --token $RUNNERTOKEN --ephemeral  --labels foobar
+    # # I used to run the runner immediately but now I want to make it a service so I can reuse the VM and cache later
+    # #- RUNNER_ALLOW_RUNASROOT=1 ./run.sh --disableupdate 
+    # - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh install 
+    # - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh start
+    # - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh status
+    # - chown -R ghrunner /actions-runner 
+    # - chown -R ghrunner /build-cache

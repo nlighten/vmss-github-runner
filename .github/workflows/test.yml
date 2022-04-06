@@ -51,6 +51,11 @@ on:
         type: string
         default: /images/linux/ubuntu2004.json
         required: true
+      vmss-name:
+        description: 'Name of the scale-set for the github runners'
+        type: string
+        default: vmss-github-runners-001
+        required: true
 
 
 
@@ -98,7 +103,7 @@ jobs:
     #                    -Location westeurope `
 
     - name: Create VM image from Disk image
-      #if: ${{ github.event.inputs.build-image }}
+      if: ${{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
         ./scripts/create-vm-image.ps1 `
@@ -106,4 +111,16 @@ jobs:
                       -ContainerName ${{ github.event.inputs.blob-container-name }} `
                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
                       -ImageDisplayName ${{ github.event.inputs.image-display-name }} `
+                      -DateQuery latest
+
+    - name: Create VMSS 
+      #if: ${{ github.event.inputs.build-image }}
+      shell: pwsh
+      run: |
+        ./scripts/create-vmss.ps1 `
+                      -Vmss ${{ github.event.inputs.vmss-name }} `
+                      -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                      -ImageDisplayName ${{ github.event.inputs.image-display-name }} `
+                      -VirtualNetworkName ${{ github.event.inputs.vnet }} `
+                      -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
                       -DateQuery latest
