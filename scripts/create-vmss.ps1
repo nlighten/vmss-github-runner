@@ -48,6 +48,7 @@ if ($DateQuery.Equals("latest")) {
 $Image = (az image list --resource-group $ResourceGroup --query "$Query" | ConvertFrom-JSON | Sort-Object -Property name | Select-Object -Last 1)
 $SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-group $NetworkResourceGroup --vnet-name $VirtualNetworkName --query id -o tsv 
 
+
 # Create the scale set
 $Vmss = az vmss create `
             --resource-group $ResourceGroup `
@@ -65,6 +66,10 @@ $Vmss = az vmss create `
             --load-balancer '""' `
             --disable-overprovision `
             --location westeurope
+
+az identity create --resource-group $ResourceGroup --name "id-$VmssName"
+
+az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities "id-$VmssName" --role "Virtual Machine Contributor" 
 
 
 
