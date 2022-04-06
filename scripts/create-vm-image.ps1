@@ -35,7 +35,7 @@ if ($DateQuery.Equals("latest")) {
 }
 
 $ImageBlobUri='https://{0}.blob.core.windows.net/{1}/{2}' -f $StorageAccount, $ContainerName, $ImageBlob.name
-$ImageName = 'DevOpsImage-{0}-{1}' -f $ImageDisplayName, $ImageBlob.time.toString("yyyy-mm-dd")
+$ImageName = 'DevOpsImage-{0}-{1}' -f $ImageDisplayName, $ImageBlob.time.toString("yyyy-MM-dd")
 
 # Create the vm image
 az image create --name $ImageName `
