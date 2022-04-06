@@ -67,7 +67,7 @@ jobs:
 
 
     - name: Checkout virtual environments at latest official ${{ github.event.inputs.image-display-name }} tag
-      if: {{ github.event.inputs.build-image }}
+      if: ${{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ github.event.inputs.image-display-name }}
@@ -81,7 +81,7 @@ jobs:
 
 
     - name: Build image using Packer
-      if: {{ github.event.inputs.build-image }}
+      if: ${{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
         ./scripts/build-disk-image.ps1 `
@@ -96,7 +96,7 @@ jobs:
                        -Location westeurope `
 
     - name: Create VM image from Disk image
-      if: {{ github.event.inputs.build-image }}
+      #if: ${{ github.event.inputs.build-image }}
       shell: pwsh
       run: |
         ./scripts/create-vm-image.ps1 `
