@@ -1,0 +1,18 @@
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to execute'
+        type: string
+        default: 'sleep 60'
+        required: true
+
+name: AzureCLITest
+
+jobs:
+  az-cli-test:
+    runs-on: self-hosted
+    steps:
+    - name: Run command
+      run: |
+        ${{ github.event.inputs.command }}
