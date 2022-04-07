@@ -78,38 +78,38 @@ jobs:
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
 
 
-    # - name: Ensure storage account and blob container exists
-    #   shell: pwsh
-    #   run: |
-    #     az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
-    #     az storage container create --name ${{ env.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+    - name: Ensure storage account and blob container exists
+      shell: pwsh
+      run: |
+        az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
+        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
 
 
-    # - name: Build image using Packer
-    #   if: ${{ github.event.inputs.build-image }}
-    #   shell: pwsh
-    #   run: |
-    #     ./scripts/build-disk-image.ps1 `
-    #                    -ResourcesNamePrefix ${{ env.image-display-name }} `
-    #                    -TemplatePath ${{ env.image-template-path }} `
-    #                    -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
-    #                    -StorageAccount ${{ github.event.inputs.storage-account }} `
-    #                    -UsePublicIp ${{ github.event.inputs.use-public-ip-for-image-build }}
-    #                    -VirtualNetworkName ${{ github.event.inputs.vnet }} `
-    #                    -VirtualNetworkRG ${{ github.event.inputs.vnet-resource-group }} `
-    #                    -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
-    #                    -Location westeurope `
+    - name: Build image using Packer
+      if: ${{ github.event.inputs.build-image == true }}
+      shell: pwsh
+      run: |
+        ./scripts/build-disk-image.ps1 `
+                       -ResourcesNamePrefix ${{ env.image-display-name }} `
+                       -TemplatePath ${{ env.image-template-path }} `
+                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                       -StorageAccount ${{ github.event.inputs.storage-account }} `
+                       -UsePublicIp ${{ github.event.inputs.use-public-ip-for-image-build }}
+                       -VirtualNetworkName ${{ github.event.inputs.vnet }} `
+                       -VirtualNetworkRG ${{ github.event.inputs.vnet-resource-group }} `
+                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
+                       -Location westeurope `
 
-    # - name: Create VM image from Disk image
-    #   if: ${{ github.event.inputs.build-image }}
-    #   shell: pwsh
-    #   run: |
-    #     ./scripts/create-vm-image.ps1 `
-    #                   -StorageAccount ${{ github.event.inputs.storage-account }} `
-    #                   -ContainerName ${{ env.blob-container-name }} `
-    #                   -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
-    #                   -ImageDisplayName ${{ env.image-display-name }} `
-    #                   -DateQuery latest
+    - name: Create VM image from Disk image
+      if: ${{ github.event.inputs.build-image == true }}
+      shell: pwsh
+      run: |
+        ./scripts/create-vm-image.ps1 `
+                      -StorageAccount ${{ github.event.inputs.storage-account }} `
+                      -ContainerName ${{ env.blob-container-name }} `
+                      -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                      -ImageDisplayName ${{ env.image-display-name }} `
+                      -DateQuery latest
 
 
     - name: Create VMSS 
