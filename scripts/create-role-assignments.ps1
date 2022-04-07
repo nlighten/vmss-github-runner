@@ -23,4 +23,4 @@ $QueueStorageAccountId = az storage account show --name $QueueStorageAccount --q
 az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName 
 
 az role assignment create --role 'Virtual Machine Contributor' --scope $VmssId --assignee-object-id $IdentityPrincipalId
-az role assignment create --role 'Storage Queue Data Contributor' --scope $QueueStorageAccountId --assignee-object-id $IdentityPrincipalId
+az role assignment create --role 'Contributor' --scope $QueueStorageAccountId --assignee-object-id $IdentityPrincipalId
