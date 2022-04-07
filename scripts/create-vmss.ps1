@@ -54,23 +54,24 @@ $SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-
 
 
 # Create the scale set
-$VmssId = az vmss create `
-            --resource-group $ResourceGroup `
-            --name $VmssName `
-            --image $Image.id `
-            --admin-username $User `
-            --admin-password $Password `
-            --authentication-type password `
-            --priority Spot `
-            --eviction-policy Delete `
-            --max-price -1 `
-            --instance-count 1 `
-            --custom-data ./config/cloud-config.yaml `
-            --subnet $SubnetId `
-            --load-balancer '""' `
-            --disable-overprovision `
-            --location westeurope
+az vmss create `
+        --resource-group $ResourceGroup `
+        --name $VmssName `
+        --image $Image.id `
+        --admin-username $User `
+        --admin-password $Password `
+        --authentication-type password `
+        --priority Spot `
+        --eviction-policy Delete `
+        --max-price -1 `
+        --instance-count 1 `
+        --custom-data ./config/cloud-config.yaml `
+        --subnet $SubnetId `
+        --load-balancer '""' `
+        --disable-overprovision `
+        --location westeurope
 
+$VmssId = az vmss show --resource-group $ResourceGroup --name $VmssName --query id -o tsv
 $IdentityPrincipalId = az identity create --resource-group $ResourceGroup --name "id-$VmssName" --query principalId -o tsv
 $StorageAccountId = az storage account show --name $StorageAccount --query id -o tsv
 
