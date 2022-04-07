@@ -71,13 +71,25 @@ $VmssId = az vmss create `
             --disable-overprovision `
             --location westeurope --query id -o tsv
 
-$IdentityPrincipalId = az identity create --resource-group $ResourceGroup --name "id-$VmssName" --query principalId
+$IdentityPrincipalId = az identity create --resource-group $ResourceGroup --name "id-$VmssName" --query principalId -o tsv
 $StorageAccountId = az storage account show --name $StorageAccount --query id -o tsv
 
+Write-Output "##### VMSS #######"
+$VmssId.getType()
+$VmssId
 
-[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($VmssId))
-[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($IdentityPrincipalId))
-[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($StorageAccountId))
+Write-Output "##### IDENTITY #######"
+$IdentityPrincipalId.getType()
+$IdentityPrincipalId
+
+Write-Output "##### STORAGE #######"
+$StorageAccountId.getType()
+$StorageAccountId
+
+
+# [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($VmssId))
+# [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($IdentityPrincipalId))
+# [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($StorageAccountId))
 
 az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName 
 
