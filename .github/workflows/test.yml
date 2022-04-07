@@ -52,6 +52,9 @@ env:
   blob-container-name: system
   image-display-name: ubuntu20
   image-template-path: /images/linux/ubuntu2004.json
+  pool-min-instances: 1
+  pool-max-instances: 5
+  pool-free-target-percentage: 25
 
 
 name: VmssGithubRunner
@@ -69,7 +72,7 @@ jobs:
 
 
     - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag
-      if: ${{ github.event.inputs.build-image }}
+      if: ${{ github.event.inputs.build-image == true }}
       shell: pwsh
       run: |
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
