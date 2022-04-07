@@ -3,7 +3,7 @@
     - path: /hooks/job-started.sh
       permissions: "0555"
       content: |
-        set -x
+        #set -x
         az login --identity --output none     
         INSTANCE_ID=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?osProfile.computerName == '$(hostname)'].instanceId" -o tsv)
         # add message to the queue 
@@ -16,7 +16,8 @@
         ACTIVE_RUNNERS=$(az storage message peek --queue-name $QUEUE_NAME --account-name $STORAGE_ACCOUNT --num-messages 32 --only-show-errors | jq '. | length')
         CURRENT_NON_FAILED_RUNNERS=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?provisioningState != 'Failed']" | jq '. | length')
         TARGET_NON_FAILED_RUNNERS=$(( ((100+$PERCENT_TARGET_AVAILABLE_RUNNERS)*$ACTIVE_RUNNERS+99)/100 ))
-        if [[ $TARGET_NON_FAILED_RUNNERS -le $MAX_RUNNERS && $TARGET_NON_FAILED_RUNNERS -gt $CURRENT_NON_FAILED_RUNNERS ]]; then
+        TARGET_NON_FAILED_RUNNERS=$(( TARGET_NON_FAILED_RUNNERS < $MAX_RUNNERS ? TARGET_NON_FAILED_RUNNERS : $MAX_RUNNERS ))
+        if [[ $TARGET_NON_FAILED_RUNNERS -gt $CURRENT_NON_FAILED_RUNNERS ]]; then
           CURRENT_FAILED_RUNNERS=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?provisioningState == 'Failed']" | jq '. | length')
           TARGET_RUNNERS=$(( ($TARGET_NON_FAILED_RUNNERS + $CURRENT_FAILED_RUNNERS) ))
           echo "Scaling up VMSS $VMSS to $TARGET_RUNNERS instances (current_runners=$CURRENT_NON_FAILED_RUNNERS, target_runners=$TARGET_NON_FAILED_RUNNERS)."
@@ -29,7 +30,7 @@
     - path: /hooks/job-completed.sh
       permissions: "0555"
       content: |
-        set -x
+        #set -x
         source /actions-runner/.registration
         az login --identity --output none                                                                                                                                 
         INSTANCE_ID=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?osProfile.computerName == '$(hostname)'].instanceId" -o tsv)
@@ -39,7 +40,7 @@
         ACTIVE_RUNNERS=$(az storage message peek --queue-name $QUEUE_NAME --account-name $STORAGE_ACCOUNT --num-messages 32 --only-show-errors | jq '. | length')
         CURRENT_NON_FAILED_RUNNERS=$(az vmss list-instances --name $VMSS --resource-group $RESOURCE_GROUP --query "[?provisioningState != 'Failed']" | jq '. | length')
         TARGET_NON_FAILED_RUNNERS=$(( ((100+$PERCENT_TARGET_AVAILABLE_RUNNERS)*$ACTIVE_RUNNERS+99)/100 ))
-        TARGET_NON_FAILED_RUNNERS=$(( TARGET_NON_FAILED_RUNNERS > MIN_RUNNERS ? TARGET_NON_FAILED_RUNNERS : MIN_RUNNERS ))
+        TARGET_NON_FAILED_RUNNERS=$(( TARGET_NON_FAILED_RUNNERS > $MIN_RUNNERS ? TARGET_NON_FAILED_RUNNERS : $MIN_RUNNERS ))
         if [[ $TARGET_NON_FAILED_RUNNERS -lt $CURRENT_NON_FAILED_RUNNERS ]]; then
           echo "Deleting instance $INSTANCE_ID with hostname $(hostname) from VMSS $VMSS due to excess capacity (current_runners=$CURRENT_NON_FAILED_RUNNERS, target_runners=$TARGET_NON_FAILED_RUNNERS)."
           az vmss delete-instances --name $VMSS --resource-group $RESOURCE_GROUP --instance-ids $INSTANCE_ID --no-wait
