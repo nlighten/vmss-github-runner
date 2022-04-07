@@ -131,6 +131,7 @@ jobs:
       run: |
         ./scripts/create-vmss.ps1 `
                       -Vmss ${{ github.event.inputs.vmss-name }} `
+                      -InstanceCount ${{ github.event.inputs.pool-min-instances }} `
                       -StorageAccount ${{ env.blob-storage-account }} `
                       -User ${{ secrets.VMSS_USER }} `
                       -Password ${{ secrets.VMSS_PASSWORD }} `

@@ -6,6 +6,10 @@ param (
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
+    [Int] $InstanceCount,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string] $StorageAccount,
 
     [Parameter(Mandatory = $true)]
@@ -64,7 +68,7 @@ az vmss create `
         --priority Spot `
         --eviction-policy Delete `
         --max-price -1 `
-        --instance-count 1 `
+        --instance-count $InstanceCount `
         --custom-data ./config/cloud-config.yaml `
         --subnet $SubnetId `
         --load-balancer '""' `
