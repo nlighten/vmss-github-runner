@@ -69,7 +69,7 @@ $VmssId = az vmss create `
             --subnet $SubnetId `
             --load-balancer '""' `
             --disable-overprovision `
-            --location westeurope --query id -o tsv
+            --location westeurope
 
 $IdentityPrincipalId = az identity create --resource-group $ResourceGroup --name "id-$VmssName" --query principalId -o tsv
 $StorageAccountId = az storage account show --name $StorageAccount --query id -o tsv
@@ -77,6 +77,7 @@ $StorageAccountId = az storage account show --name $StorageAccount --query id -o
 Write-Output "##### VMSS #######"
 $VmssId.getType()
 $VmssId
+[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($VmssId))
 
 Write-Output "##### IDENTITY #######"
 $IdentityPrincipalId.getType()
