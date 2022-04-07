@@ -126,7 +126,7 @@ jobs:
     - name: Create Role Assignments 
       shell: pwsh
       run: |
-        ./scripts/create-vmss.ps1 `
+        ./scripts/create-role-assignments.ps1 `
                       -Vmss ${{ github.event.inputs.vmss-name }} `
                       -QueueStorageAccount ${{ env.queue-storage-account }} `
                       -ResourceGroup ${{ env.runner-resource-group }}
