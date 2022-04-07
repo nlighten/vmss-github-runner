@@ -75,8 +75,11 @@ $IdentityPrincipalId = az identity create --resource-group $ResourceGroup --name
 $StorageAccountId = az storage account show --name $StorageAccount --query id -o tsv
 
 
-az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName 
+[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($VmssId))
+[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($IdentityPrincipalId))
+[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($StorageAccountId))
 
+az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName 
 
 az role assignment create --role 'Virtual Machine Contributor' --scope $VmssId --assignee-object-id $IdentityPrincipalId
 az role assignment create --role     --scope $StorageAccountId --assignee-object-id $IdentityPrincipalId
