@@ -20,6 +20,7 @@ on:
 
 env:
   runner-resource-group: rg-vmss-github-runner
+  vnet-resource-group: rg-vnet-default
   blob-storage-account: stgithubrunnerdemo
   queue-storage-account: stgithubrunnerqueue
   vnet: vnet-default
@@ -60,7 +61,6 @@ jobs:
         az storage account create --name ${{ env.blob-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Premium_LRS --location westeurope
         az storage container create --name ${{ env.blob-container-name }} --account-name ${{ env.blob-storage-account }}  --resource-group ${{ env.runner-resource-group }}
         az storage account create --name ${{ env.queue-storage-account }} --resource-group ${{ env.runner-resource-group }} --location westeurope
-        Write-Output "az storage queue create --name ${{ github.event.inputs.vmss-name }} --account-name ${{ env.queue-storage-account }}"
         az storage queue create --name ${{ github.event.inputs.vmss-name }} --account-name ${{ env.queue-storage-account }}
 
 
