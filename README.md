@@ -23,7 +23,7 @@ Currently the VMSS has a Managed Identity with limited rights to access a storag
 |pool-free-target-percentage| number | Percentage of active runner count that the scale set should try to maintain as available|
 
 
-$ Secrets
+# Secrets
 | Secret | Description|
 |--------|------------|
 |AZURE_CREDENTIALS| Azure credentials to use |
