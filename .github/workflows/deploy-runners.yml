@@ -1,6 +1,7 @@
 on:
   workflow_dispatch:
     inputs:
+<<<<<<< HEAD
       runner-resource-group:
         description: 'Resource Group for the runners'
         type: string
@@ -31,6 +32,8 @@ on:
         type: boolean
         default: false
         required: true
+=======
+>>>>>>> initial
       build-image:
         description: 'Build the image?'
         type: boolean
@@ -46,6 +49,7 @@ on:
         type: string
         default: nlighten/vmss-github-runner
         required: true
+<<<<<<< HEAD
 
 
 env:
@@ -55,6 +59,40 @@ env:
   pool-min-instances: 1
   pool-max-instances: 5
   pool-free-target-percentage: 25
+=======
+      runner-labels:
+        description: 'Comma separated list of labels'
+        type: string
+        default: foo,bar
+        required: true
+      pool-min-instances:
+        description: 'Minimum number of instances in the runner pool'
+        type: number
+        default: 1
+        required: true
+      pool-max-instances:
+        description: 'Minimum number of instances in the runner pool (<32)'
+        type: number
+        default: 4
+        required: true
+      pool-free-target-percentage:
+        description: 'Target percentage of free/available runners'
+        type: number
+        default: 25
+        required: true
+
+env:
+  runner-resource-group: rg-vmss-github-runner
+  vnet-resource-group: rg-vnet-default
+  blob-storage-account: stgithubrunnerdemo
+  queue-storage-account: stgithubrunnerqueue
+  vnet: vnet-default
+  subnet: snet-github-runners
+  blob-container-name: system
+  image-display-name: ubuntu20
+  image-template-path: /images/linux/ubuntu2004.json
+  use-public-ip-for-image-build: false
+>>>>>>> initial
 
 
 name: VmssGithubRunner
@@ -78,11 +116,21 @@ jobs:
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
 
 
+<<<<<<< HEAD
     - name: Ensure storage account and blob container exists
       shell: pwsh
       run: |
         az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
         az storage container create --name ${{ env.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+=======
+    - name: Ensure storage accounts exists
+      shell: pwsh
+      run: |
+        az storage account create --name ${{ env.blob-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Premium_LRS --location westeurope
+        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ env.blob-storage-account }}  --resource-group ${{ env.runner-resource-group }}
+        az storage account create --name ${{ env.queue-storage-account }} --resource-group ${{ env.runner-resource-group }} --location westeurope
+        az storage queue create --name ${{ github.event.inputs.vmss-name }} --account-name ${{ env.queue-storage-account }}
+>>>>>>> initial
 
 
     - name: Build image using Packer
@@ -92,6 +140,7 @@ jobs:
         ./scripts/build-disk-image.ps1 `
                        -ResourcesNamePrefix ${{ env.image-display-name }} `
                        -TemplatePath ${{ env.image-template-path }} `
+<<<<<<< HEAD
                        -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
                        -StorageAccount ${{ github.event.inputs.storage-account }} `
                        -UsePublicIp ${{ github.event.inputs.use-public-ip-for-image-build }}
@@ -100,18 +149,36 @@ jobs:
                        -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
                        -Location westeurope `
 
+=======
+                       -ResourceGroup ${{ env.runner-resource-group }} `
+                       -StorageAccount ${{ env.blob-storage-account }} `
+                       -UsePublicIp ${{ env.use-public-ip-for-image-build }}
+                       -VirtualNetworkName ${{ env.vnet }} `
+                       -VirtualNetworkRG ${{ env.vnet-resource-group }} `
+                       -VirtualNetworkSubnet ${{ env.subnet }} `
+                       -Location westeurope `
+
+
+>>>>>>> initial
     - name: Create VM image from Disk image
       if: ${{ github.event.inputs.build-image == true }}
       shell: pwsh
       run: |
         ./scripts/create-vm-image.ps1 `
+<<<<<<< HEAD
                       -StorageAccount ${{ github.event.inputs.storage-account }} `
                       -ContainerName ${{ env.blob-container-name }} `
                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+=======
+                      -StorageAccount ${{ env.blob-storage-account }} `
+                      -ContainerName ${{ env.blob-container-name }} `
+                      -ResourceGroup ${{ env.runner-resource-group }} `
+>>>>>>> initial
                       -ImageDisplayName ${{ env.image-display-name }} `
                       -DateQuery latest
 
 
+<<<<<<< HEAD
     - name: Create VMSS 
       shell: bash
       run: |
@@ -120,17 +187,36 @@ jobs:
         VMSS: ${{ github.event.inputs.vmss-name }}
         RESOURCE_GROUP: ${{ github.event.inputs.runner-resource-group }}
         STORAGE_ACCOUNT: ${{ github.event.inputs.storage-account }}
+=======
+    - name: Create cloud-config 
+      shell: bash
+      run: |
+        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$USER_NAME,$LABELS,$PERCENT_TARGET_AVAILABLE_RUNNERS,$MIN_RUNNERS,$MAX_RUNNERS'< config/cloud-config.yaml.template > config/cloud-config.yaml
+      env:
+        VMSS: ${{ github.event.inputs.vmss-name }}
+        RESOURCE_GROUP: ${{ env.runner-resource-group }}
+        STORAGE_ACCOUNT: ${{ env.queue-storage-account }}
+>>>>>>> initial
         QUEUE_NAME: ${{ github.event.inputs.vmss-name }}
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
         GITHUB_PAT: ${{ secrets.RUNNER_PAT }}
         USER_NAME: ${{ secrets.VMSS_USER }}
+<<<<<<< HEAD
         LABELS: foo,bar
+=======
+        PERCENT_TARGET_AVAILABLE_RUNNERS: ${{ github.event.inputs.pool-free-target-percentage }}
+        MIN_RUNNERS: ${{ github.event.inputs.pool-min-instances }}
+        MAX_RUNNERS: ${{ github.event.inputs.pool-max-instances }}
+        LABELS: ${{ github.event.inputs.runner-labels }}
+
+>>>>>>> initial
 
     - name: Create VMSS 
       shell: pwsh
       run: |
         ./scripts/create-vmss.ps1 `
                       -Vmss ${{ github.event.inputs.vmss-name }} `
+<<<<<<< HEAD
                       -StorageAccount ${{ github.event.inputs.storage-account }} `
                       -User ${{ secrets.VMSS_USER }} `
                       -Password ${{ secrets.VMSS_PASSWORD }} `
@@ -140,3 +226,23 @@ jobs:
                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
                       -NetworkResourceGroup ${{ github.event.inputs.vnet-resource-group }} `
                       -DateQuery latest
+=======
+                      -StorageAccount ${{ env.blob-storage-account }} `
+                      -User ${{ secrets.VMSS_USER }} `
+                      -Password ${{ secrets.VMSS_PASSWORD }} `
+                      -ResourceGroup ${{ env.runner-resource-group }} `
+                      -ImageDisplayName ${{ env.image-display-name }} `
+                      -VirtualNetworkName ${{ env.vnet }} `
+                      -VirtualNetworkSubnet ${{ env.subnet }} `
+                      -NetworkResourceGroup ${{ env.vnet-resource-group }} `
+                      -DateQuery latest
+
+
+    - name: Create Role Assignments 
+      shell: pwsh
+      run: |
+        ./scripts/create-role-assignments.ps1 `
+                      -Vmss ${{ github.event.inputs.vmss-name }} `
+                      -QueueStorageAccount ${{ env.queue-storage-account }} `
+                      -ResourceGroup ${{ env.runner-resource-group }}
+>>>>>>> initial
