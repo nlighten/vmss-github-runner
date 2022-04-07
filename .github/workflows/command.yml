@@ -7,7 +7,7 @@ on:
         default: 'sleep 60'
         required: true
 
-name: AzureCLITest
+name: CommandTest
 
 jobs:
   az-cli-test:
