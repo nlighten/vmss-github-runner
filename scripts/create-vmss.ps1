@@ -75,30 +75,7 @@ $VmssId = az vmss show --resource-group $ResourceGroup --name $VmssName --query 
 $IdentityPrincipalId = az identity create --resource-group $ResourceGroup --name "id-$VmssName" --query principalId -o tsv
 $StorageAccountId = az storage account show --name $StorageAccount --query id -o tsv
 
-Write-Output "##### VMSS #######"
-$VmssId.getType()
-$VmssId
-[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($VmssId))
-
-Write-Output "##### IDENTITY #######"
-$IdentityPrincipalId.getType()
-$IdentityPrincipalId
-
-Write-Output "##### STORAGE #######"
-$StorageAccountId.getType()
-$StorageAccountId
-
-
-# [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($VmssId))
-# [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($IdentityPrincipalId))
-# [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($StorageAccountId))
-
 az vmss identity assign --resource-group $ResourceGroup  --name $VmssName --identities id-$VmssName 
 
 az role assignment create --role 'Virtual Machine Contributor' --scope $VmssId --assignee-object-id $IdentityPrincipalId
-az role assignment create --role     --scope $StorageAccountId --assignee-object-id $IdentityPrincipalId
-
-
-
-
-
+az role assignment create --role 'Storage Queue Data Contributor' --scope $StorageAccountId --assignee-object-id $IdentityPrincipalId
