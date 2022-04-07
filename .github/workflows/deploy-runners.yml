@@ -1,0 +1,142 @@
+on:
+  workflow_dispatch:
+    inputs:
+      runner-resource-group:
+        description: 'Resource Group for the runners'
+        type: string
+        default: 'rg-vmss-github-runner'
+        required: true
+      storage-account:
+        description: 'Storage Account'
+        type: string
+        default: 'stgithubrunnerdemo'
+        required: true
+      vnet:
+        description: 'Vnet used for the runners'
+        type: string
+        default: 'vnet-default'
+        required: true
+      subnet:
+        description: 'Subnet used for the runners'
+        type: string
+        default: 'snet-github-runners'
+        required: true
+      vnet-resource-group:
+        description: 'Resource Group for the vnet'
+        type: string
+        default: 'rg-vnet-default'
+        required: true
+      use-public-ip-for-image-build:
+        description: 'Use a public ip-address for image build?'
+        type: boolean
+        default: false
+        required: true
+      build-image:
+        description: 'Build the image?'
+        type: boolean
+        default: false
+        required: true
+      vmss-name:
+        description: 'Name of the scale-set for the github runners'
+        type: string
+        default: vmss-github-runners-001
+        required: true
+      github-repo:
+        description: 'Name of the github repo where runners should be registered'
+        type: string
+        default: nlighten/vmss-github-runner
+        required: true
+
+
+env:
+  blob-container-name: system
+  image-display-name: ubuntu20
+  image-template-path: /images/linux/ubuntu2004.json
+  pool-min-instances: 1
+  pool-max-instances: 5
+  pool-free-target-percentage: 25
+
+
+name: VmssGithubRunner
+jobs:
+  build-runner-image:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+
+    - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag
+      if: ${{ github.event.inputs.build-image == true }}
+      shell: pwsh
+      run: |
+        ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
+
+
+    - name: Ensure storage account and blob container exists
+      shell: pwsh
+      run: |
+        az storage account create --name ${{ github.event.inputs.storage-account }} --resource-group ${{ github.event.inputs.runner-resource-group }} --sku Premium_LRS --location westeurope
+        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ github.event.inputs.storage-account }}  --resource-group ${{ github.event.inputs.runner-resource-group }}
+
+
+    - name: Build image using Packer
+      if: ${{ github.event.inputs.build-image == true }}
+      shell: pwsh
+      run: |
+        ./scripts/build-disk-image.ps1 `
+                       -ResourcesNamePrefix ${{ env.image-display-name }} `
+                       -TemplatePath ${{ env.image-template-path }} `
+                       -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                       -StorageAccount ${{ github.event.inputs.storage-account }} `
+                       -UsePublicIp ${{ github.event.inputs.use-public-ip-for-image-build }}
+                       -VirtualNetworkName ${{ github.event.inputs.vnet }} `
+                       -VirtualNetworkRG ${{ github.event.inputs.vnet-resource-group }} `
+                       -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
+                       -Location westeurope `
+
+    - name: Create VM image from Disk image
+      if: ${{ github.event.inputs.build-image == true }}
+      shell: pwsh
+      run: |
+        ./scripts/create-vm-image.ps1 `
+                      -StorageAccount ${{ github.event.inputs.storage-account }} `
+                      -ContainerName ${{ env.blob-container-name }} `
+                      -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                      -ImageDisplayName ${{ env.image-display-name }} `
+                      -DateQuery latest
+
+
+    - name: Create VMSS 
+      shell: bash
+      run: |
+        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$USER_NAME,$LABELS'< config/cloud-config.yaml.template > config/cloud-config.yaml
+      env:
+        VMSS: ${{ github.event.inputs.vmss-name }}
+        RESOURCE_GROUP: ${{ github.event.inputs.runner-resource-group }}
+        STORAGE_ACCOUNT: ${{ github.event.inputs.storage-account }}
+        QUEUE_NAME: ${{ github.event.inputs.vmss-name }}
+        GITHUB_REPO: ${{ github.event.inputs.github-repo }}
+        GITHUB_PAT: ${{ secrets.RUNNER_PAT }}
+        USER_NAME: ${{ secrets.VMSS_USER }}
+        LABELS: foo,bar
+
+    - name: Create VMSS 
+      shell: pwsh
+      run: |
+        ./scripts/create-vmss.ps1 `
+                      -Vmss ${{ github.event.inputs.vmss-name }} `
+                      -StorageAccount ${{ github.event.inputs.storage-account }} `
+                      -User ${{ secrets.VMSS_USER }} `
+                      -Password ${{ secrets.VMSS_PASSWORD }} `
+                      -ResourceGroup ${{ github.event.inputs.runner-resource-group }} `
+                      -ImageDisplayName ${{ env.image-display-name }} `
+                      -VirtualNetworkName ${{ github.event.inputs.vnet }} `
+                      -VirtualNetworkSubnet ${{ github.event.inputs.subnet }} `
+                      -NetworkResourceGroup ${{ github.event.inputs.vnet-resource-group }} `
+                      -DateQuery latest
