@@ -99,7 +99,7 @@ jobs:
       env:
         VMSS: ${{ github.event.inputs.vmss-name }}
         RESOURCE_GROUP: ${{ env.runner-resource-group }}
-        STORAGE_ACCOUNT: ${{ env.blob-storage-account }}
+        STORAGE_ACCOUNT: ${{ env.queue-storage-account }}
         QUEUE_NAME: ${{ github.event.inputs.vmss-name }}
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
         GITHUB_PAT: ${{ secrets.RUNNER_PAT }}
