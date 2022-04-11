@@ -17,7 +17,7 @@ write_files:
       azure-keyvault-certificates==4.3.0
       azure-mgmt-resource==21.0.0
       azure-mgmt-compute==26.1.0
-      azure-mgmt-storage==26.1.0   
+      azure-mgmt-storage==20.0.0   
       azure-storage-queue==12.2.0
 
   - path: /home/$USER_NAME/app/app.py
