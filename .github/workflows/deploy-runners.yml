@@ -6,10 +6,15 @@ on:
         type: boolean
         default: false
         required: true
-      vmss-name:
+      vmss-runner-name:
         description: 'Name of the scale-set for the github runners'
         type: string
         default: vmss-github-runners-001
+        required: true
+      vm-scaler-name:
+        description: 'Name of the vm runner the scaler'
+        type: string
+        default: vm-github-scaler-001
         required: true
       github-repo:
         description: 'Name of the github repo where runners should be registered'
@@ -77,7 +82,7 @@ jobs:
         az storage account create --name ${{ env.blob-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Premium_LRS --location westeurope
         az storage container create --name ${{ env.blob-container-name }} --account-name ${{ env.blob-storage-account }}  --resource-group ${{ env.runner-resource-group }}
         az storage account create --name ${{ env.queue-storage-account }} --resource-group ${{ env.runner-resource-group }} --location westeurope
-        az storage queue create --name ${{ github.event.inputs.vmss-name }} --account-name ${{ env.queue-storage-account }}
+        az storage queue create --name ${{ github.event.inputs.vmss-runner-name }} --account-name ${{ env.queue-storage-account }}
 
 
     - name: Build image using Packer
@@ -108,15 +113,47 @@ jobs:
                       -DateQuery latest
 
 
-    - name: Create cloud-config 
+    - name: Create cloud-config for scaler 
       shell: bash
       run: |
-        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$USER_NAME,$LABELS,$PERCENT_TARGET_AVAILABLE_RUNNERS,$MIN_RUNNERS,$MAX_RUNNERS'< config/cloud-config.yaml.template > config/cloud-config.yaml
+        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$USER_NAME,$LABELS,$PERCENT_TARGET_AVAILABLE_RUNNERS,$MIN_RUNNERS,$MAX_RUNNERS'< config/cloud-config-scaler.yaml.template > config/cloud-config-scaler.yaml
+        envsubst '$KEY_VAULT_URL,$GITHUB_REPO,$SUBSCRIPTION_ID,$RESOURCE_GROUP,$VMSS,$STORAGE_ACCOUNT_NAME,$MIN_RUNNERS,$MAX_RUNNERS,$TARGET_AVAILABLE_RUNNERS_PERCENT,$VNET_CIDR'< config/cloud-config-scaler.yaml.template > config/cloud-config-scaler.yaml
       env:
-        VMSS: ${{ github.event.inputs.vmss-name }}
+        KEY_VAULT_URL: https://vmssrunnerkeyvault.vault.azure.net/
+        GITHUB_REPO: ${{ github.event.inputs.github-repo }}
+        SUBSCRIPTION_ID: 112e1628-4525-4638-9ce0-8e8757144034
+        RESOURCE_GROUP: ${{ env.runner-resource-group }}
+        VMSS: ${{ github.event.inputs.vmss-runner-name }}
+        STORAGE_ACCOUNT: ${{ env.queue-storage-account }}
+        USER_NAME: ${{ secrets.VMSS_USER }}
+        TARGET_AVAILABLE_RUNNERS_PERCENT: ${{ github.event.inputs.pool-free-target-percentage }}
+        MIN_RUNNERS: ${{ github.event.inputs.pool-min-instances }}
+        MAX_RUNNERS: ${{ github.event.inputs.pool-max-instances }}
+
+
+    - name: Create VM 
+      shell: pwsh
+      run: |
+        ./scripts/create-scaler-vm.ps1 `
+                      -Vm ${{ github.event.inputs.vm-scaler-name }} `
+                      -User ghscaler `
+                      -Password ${{ secrets.VMSS_PASSWORD }} `
+                      -ResourceGroup ${{ env.runner-resource-group }} `
+                      -VirtualNetworkName ${{ env.vnet }} `
+                      -VirtualNetworkSubnet ${{ env.subnet }} `
+                      -NetworkResourceGroup ${{ env.vnet-resource-group }} `
+                      -DateQuery latest
+
+
+    - name: Create cloud-config for runner 
+      shell: bash
+      run: |
+        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$USER_NAME,$LABELS,$PERCENT_TARGET_AVAILABLE_RUNNERS,$MIN_RUNNERS,$MAX_RUNNERS'< config/cloud-config-runner.yaml.template > config/cloud-config-runner.yaml
+      env:
+        VMSS: ${{ github.event.inputs.vmss-runner-name }}
         RESOURCE_GROUP: ${{ env.runner-resource-group }}
         STORAGE_ACCOUNT: ${{ env.queue-storage-account }}
-        QUEUE_NAME: ${{ github.event.inputs.vmss-name }}
+        QUEUE_NAME: ${{ github.event.inputs.vmss-runner-name }}
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
         GITHUB_PAT: ${{ secrets.RUNNER_PAT }}
         USER_NAME: ${{ secrets.VMSS_USER }}
@@ -129,8 +166,8 @@ jobs:
     - name: Create VMSS 
       shell: pwsh
       run: |
-        ./scripts/create-vmss.ps1 `
-                      -Vmss ${{ github.event.inputs.vmss-name }} `
+        ./scripts/create-runner-vmss.ps1 `
+                      -VmssName ${{ github.event.inputs.vmss-runner-name }} `
                       -InstanceCount ${{ github.event.inputs.pool-min-instances }} `
                       -StorageAccount ${{ env.blob-storage-account }} `
                       -User ${{ secrets.VMSS_USER }} `
@@ -147,6 +184,6 @@ jobs:
       shell: pwsh
       run: |
         ./scripts/create-role-assignments.ps1 `
-                      -Vmss ${{ github.event.inputs.vmss-name }} `
+                      -Vmss ${{ github.event.inputs.vmss-runner-name }} `
                       -QueueStorageAccount ${{ env.queue-storage-account }} `
                       -ResourceGroup ${{ env.runner-resource-group }}
