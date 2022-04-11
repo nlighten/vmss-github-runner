@@ -26,7 +26,7 @@ param (
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
-    [string] $ResourceGroup,
+    [string] $ResourceGroup
 )
 
 
@@ -44,4 +44,5 @@ az vm create `
         --authentication-type password `
         --custom-data ./config/cloud-config-runner.yaml `
         --subnet $SubnetId `
+        --size Standard_B1s `
         --location westeurope
