@@ -73,5 +73,6 @@ az vmss create `
         --subnet $SubnetId `
         --load-balancer '""' `
         --disable-overprovision `
-        --vm-sku Standard_B1s `
         --location westeurope
+
+#       --vm-sku Standard_B1s `
