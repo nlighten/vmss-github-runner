@@ -132,7 +132,8 @@ jobs:
         VNET_CIDR: '0.0.0.0/0'
 
 
-    - name: Create VM 
+    - name: Create VM
+      id: create-vm
       shell: pwsh
       run: |
         ./scripts/create-scaler-vm.ps1 `
@@ -148,18 +149,10 @@ jobs:
     - name: Create cloud-config for runner 
       shell: bash
       run: |
-        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$USER_NAME,$LABELS,$PERCENT_TARGET_AVAILABLE_RUNNERS,$MIN_RUNNERS,$MAX_RUNNERS'< config/cloud-config-runner.yaml.template > config/cloud-config-runner.yaml
+        envsubst '$SCALER_IP,$GITHUB_REPO,$LABELS'< config/cloud-config-runner.yaml.template > config/cloud-config-runner.yaml
       env:
-        VMSS: ${{ github.event.inputs.vmss-runner-name }}
-        RESOURCE_GROUP: ${{ env.runner-resource-group }}
-        STORAGE_ACCOUNT: ${{ env.queue-storage-account }}
-        QUEUE_NAME: ${{ github.event.inputs.vmss-runner-name }}
+        SCALER_IP: ${{ steps.create-vm.outputs.scaler-ip }}
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
-        GITHUB_PAT: ${{ secrets.RUNNER_PAT }}
-        USER_NAME: ${{ secrets.VMSS_USER }}
-        PERCENT_TARGET_AVAILABLE_RUNNERS: ${{ github.event.inputs.pool-free-target-percentage }}
-        MIN_RUNNERS: ${{ github.event.inputs.pool-min-instances }}
-        MAX_RUNNERS: ${{ github.event.inputs.pool-max-instances }}
         LABELS: ${{ github.event.inputs.runner-labels }}
 
 

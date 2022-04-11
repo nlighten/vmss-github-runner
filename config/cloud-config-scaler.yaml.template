@@ -156,7 +156,7 @@ write_files:
       Environment="GITHUB_REPO=$GITHUB_REPO"
       Environment="SUBSCRIPTION_ID=$SUBSCRIPTION_ID"
       Environment="RESOURCE_GROUP=$RESOURCE_GROUP"
-      Environment="VMSS=$VMSS"
+      Environment="VMSS_NAME=$VMSS_NAME"
       Environment="STORAGE_ACCOUNT_NAME=$STORAGE_ACCOUNT_NAME"
       Environment="USER_NAME=$USER_NAME"
       Environment="MIN_RUNNERS=$MIN_RUNNERS"

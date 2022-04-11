@@ -48,3 +48,7 @@ az vm create `
         --location westeurope
 
 #        --public-ip-address '""' `
+
+
+$PrivateIpAddress = az vm show --name  $VmName --resource-group $ResourceGroup --show-details --query privateIps -o tsv
+Write-Output "::set-output name=scaler-ip::$PrivateIpAddress"
