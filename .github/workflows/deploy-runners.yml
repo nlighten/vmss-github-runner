@@ -116,8 +116,8 @@ jobs:
     - name: Create cloud-config for scaler 
       shell: bash
       run: |
-        envsubst '$VMSS,$RESOURCE_GROUP,$STORAGE_ACCOUNT,$QUEUE_NAME$,$GITHUB_REPO,$GITHUB_PAT,$USER_NAME,$LABELS,$PERCENT_TARGET_AVAILABLE_RUNNERS,$MIN_RUNNERS,$MAX_RUNNERS'< config/cloud-config-scaler.yaml.template > config/cloud-config-scaler.yaml
-        envsubst '$KEY_VAULT_URL,$GITHUB_REPO,$SUBSCRIPTION_ID,$RESOURCE_GROUP,$VMSS,$STORAGE_ACCOUNT_NAME,$MIN_RUNNERS,$MAX_RUNNERS,$TARGET_AVAILABLE_RUNNERS_PERCENT,$VNET_CIDR'< config/cloud-config-scaler.yaml.template > config/cloud-config-scaler.yaml
+        envsubst '$KEY_VAULT_URL,$GITHUB_REPO,$SUBSCRIPTION_ID,$RESOURCE_GROUP,$VMSS,$STORAGE_ACCOUNT_NAME,$USER_NAME,$MIN_RUNNERS,$MAX_RUNNERS,$TARGET_AVAILABLE_RUNNERS_PERCENT,$VNET_CIDR'< config/cloud-config-scaler.yaml.template > config/cloud-config-scaler.yaml
+        cat config/cloud-config-scaler.yaml
       env:
         KEY_VAULT_URL: https://vmssrunnerkeyvault.vault.azure.net/
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
@@ -125,7 +125,7 @@ jobs:
         RESOURCE_GROUP: ${{ env.runner-resource-group }}
         VMSS: ${{ github.event.inputs.vmss-runner-name }}
         STORAGE_ACCOUNT: ${{ env.queue-storage-account }}
-        USER_NAME: ${{ secrets.VMSS_USER }}
+        USER_NAME: hgscaler
         TARGET_AVAILABLE_RUNNERS_PERCENT: ${{ github.event.inputs.pool-free-target-percentage }}
         MIN_RUNNERS: ${{ github.event.inputs.pool-min-instances }}
         MAX_RUNNERS: ${{ github.event.inputs.pool-max-instances }}

@@ -34,7 +34,7 @@ param (
 $SubnetId = az network vnet subnet show --name $VirtualNetworkSubnet --resource-group $NetworkResourceGroup --vnet-name $VirtualNetworkName --query id -o tsv 
 
 
-# Create the scale set
+# Create the vm
 az vm create `
         --resource-group $ResourceGroup `
         --name $VmName `
@@ -45,4 +45,5 @@ az vm create `
         --custom-data ./config/cloud-config-scaler.yaml `
         --subnet $SubnetId `
         --size Standard_B1s `
+#        --public-ip-address '""' `
         --location westeurope
