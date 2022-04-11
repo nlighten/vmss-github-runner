@@ -141,8 +141,7 @@ jobs:
                       -ResourceGroup ${{ env.runner-resource-group }} `
                       -VirtualNetworkName ${{ env.vnet }} `
                       -VirtualNetworkSubnet ${{ env.subnet }} `
-                      -NetworkResourceGroup ${{ env.vnet-resource-group }} `
-                      -DateQuery latest
+                      -NetworkResourceGroup ${{ env.vnet-resource-group }}
 
 
     - name: Create cloud-config for runner 
