@@ -150,7 +150,7 @@ write_files:
       After=network.target
 
       [Service]
-      User=ghrunner
+      User=$USER_NAME
       WorkingDirectory=/home/$USER_NAME/app
       Environment="KEY_VAULT_URL=$KEY_VAULT_URL"
       Environment="GITHUB_REPO=$GITHUB_REPO"
