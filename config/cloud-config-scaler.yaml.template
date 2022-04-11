@@ -151,7 +151,18 @@ write_files:
 
       [Service]
       User=ghrunner
-      WorkingDirectory=/home/ghrunner
+      WorkingDirectory=/home/$USER_NAME/app
+      Environment="KEY_VAULT_URL=$KEY_VAULT_URL"
+      Environment="GITHUB_REPO=$GITHUB_REPO"
+      Environment="SUBSCRIPTION_ID=$SUBSCRIPTION_ID"
+      Environment="RESOURCE_GROUP=$RESOURCE_GROUP"
+      Environment="VMSS=$VMSS"
+      Environment="STORAGE_ACCOUNT_NAME=$STORAGE_ACCOUNT_NAME"
+      Environment="USER_NAME=$USER_NAME"
+      Environment="MIN_RUNNERS=$MIN_RUNNERS"
+      Environment="MAX_RUNNERS=$MAX_RUNNERS"
+      Environment="TARGET_AVAILABLE_RUNNERS_PERCENT=$TARGET_AVAILABLE_RUNNERS_PERCENT"
+      Environment="VNET_CIDR=$VNET_CIDR"
       ExecStart=gunicorn -w 3 -b 0.0.0.0:5000 app:app
       Restart=always
 
