@@ -184,7 +184,7 @@ jobs:
       shell: pwsh
       run: |
         ./scripts/create-role-assignments.ps1 `
-                      -VmName ${{ github.event.inputs.vmss-scaler-name }} `
+                      -VmName ${{ github.event.inputs.vm-scaler-name }} `
                       -VmssName ${{ github.event.inputs.vmss-runner-name }} `
                       -QueueStorageAccount ${{ env.queue-storage-account }} `
                       -ResourceGroup ${{ env.runner-resource-group }}
