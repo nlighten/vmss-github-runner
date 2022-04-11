@@ -45,5 +45,6 @@ az vm create `
         --custom-data ./config/cloud-config-scaler.yaml `
         --subnet $SubnetId `
         --size Standard_B1s `
-#        --public-ip-address '""' `
         --location westeurope
+
+#        --public-ip-address '""' `
