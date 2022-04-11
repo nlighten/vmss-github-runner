@@ -42,7 +42,7 @@ az vm create `
         --admin-username $User `
         --admin-password $Password `
         --authentication-type password `
-        --custom-data ./config/cloud-config-runner.yaml `
+        --custom-data ./config/cloud-config-scaler.yaml `
         --subnet $SubnetId `
         --size Standard_B1s `
         --location westeurope
