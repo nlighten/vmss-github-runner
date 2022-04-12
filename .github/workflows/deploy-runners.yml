@@ -124,7 +124,7 @@ jobs:
         SUBSCRIPTION_ID: 112e1628-4525-4638-9ce0-8e8757144034
         RESOURCE_GROUP: ${{ env.runner-resource-group }}
         VMSS_NAME: ${{ github.event.inputs.vmss-runner-name }}
-        STORAGE_ACCOUNT: ${{ env.queue-storage-account }}
+        STORAGE_ACCOUNT_NAME: ${{ env.queue-storage-account }}
         USER_NAME: ghscaler
         TARGET_AVAILABLE_RUNNERS_PERCENT: ${{ github.event.inputs.pool-free-target-percentage }}
         MIN_RUNNERS: ${{ github.event.inputs.pool-min-instances }}
