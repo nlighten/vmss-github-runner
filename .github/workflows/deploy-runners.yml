@@ -149,10 +149,11 @@ jobs:
     - name: Create cloud-config for runner 
       shell: bash
       run: |
-        envsubst '$SCALER_IP,$GITHUB_REPO,$LABELS'< config/cloud-config-runner.yaml.template > config/cloud-config-runner.yaml
+        envsubst '$SCALER_IP,$GITHUB_REPO,$USER_NAME,$LABELS'< config/cloud-config-runner.yaml.template > config/cloud-config-runner.yaml
       env:
         SCALER_IP: ${{ steps.create-vm.outputs.scaler-ip }}
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
+        USER_NAME: ghrunner
         LABELS: ${{ github.event.inputs.runner-labels }}
 
 
@@ -180,4 +181,5 @@ jobs:
                       -VmName ${{ github.event.inputs.vm-scaler-name }} `
                       -VmssName ${{ github.event.inputs.vmss-runner-name }} `
                       -QueueStorageAccount ${{ env.queue-storage-account }} `
-                      -ResourceGroup ${{ env.runner-resource-group }}
+                      -ResourceGroup ${{ env.runner-resource-group }} `
+                      -NetworkResourceGroup ${{ env.vnet-resource-group }}

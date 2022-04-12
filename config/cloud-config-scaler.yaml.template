@@ -165,6 +165,7 @@ write_files:
       Environment="VNET_CIDR=$VNET_CIDR"
       ExecStart=gunicorn -w 3 -b 0.0.0.0:5000 app:app
       Restart=always
+      RestartSec=60
 
       [Install]
       WantedBy=multi-user.target

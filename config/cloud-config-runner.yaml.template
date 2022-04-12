@@ -10,7 +10,7 @@ write_files:
     permissions: "0555"
     content: |
       source /actions-runner/.registration
-      curl -s http://$SCALER_IP:5000/stop/$(hostname)/$RECEIPT)
+      curl -s http://$SCALER_IP:5000/stop/$(hostname)/$RECEIPT
 
 
 runcmd:

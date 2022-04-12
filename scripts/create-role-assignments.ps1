@@ -14,7 +14,11 @@ param (
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
-    [string] $ResourceGroup
+    [string] $ResourceGroup,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string] $NetworkResourceGroup
 
 )
 
@@ -26,8 +30,7 @@ $QueueStorageAccountId = az storage account show --name $QueueStorageAccount --q
 
 az vm identity assign --resource-group $ResourceGroup  --name $VmName --identities id-$VmName 
 
+az role assignment create --role 'Reader' --resource-group $ResourceGroup --assignee-object-id $IdentityPrincipalId
+az role assignment create --role 'Network Contributor' --resource-group $ResourceGroup --assignee-object-id $IdentityPrincipalId
 az role assignment create --role 'Virtual Machine Contributor' --scope $VmssId --assignee-object-id $IdentityPrincipalId
 az role assignment create --role 'Contributor' --scope $QueueStorageAccountId --assignee-object-id $IdentityPrincipalId
-
-# restart vm to let scaler pick up the identity
-az vm restart --resource-group $ResourceGroup  --name $VmName 
