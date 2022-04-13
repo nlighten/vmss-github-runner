@@ -27,12 +27,12 @@ on:
         default: foo,bar
         required: true
       pool-min-instances:
-        description: 'Minimum number of instances in the runner pool'
+        description: 'Minimum number of instances in the runner pool (>= 1)'
         type: number
         default: 1
         required: true
       pool-max-instances:
-        description: 'Minimum number of instances in the runner pool (<32)'
+        description: 'Maximum number of instances in the runner pool'
         type: number
         default: 4
         required: true

@@ -126,9 +126,9 @@ write_files:
           queue_client.delete_message(receipt_info.split('|')[0], receipt_info.split('|')[1], timeout=10)
           queue_properties = queue_client.get_queue_properties(timeout=10)
           active_runners_count = queue_properties.approximate_message_count
-          target_runner_count = min(math.ceil(active_runners_count*(100+target_free_runners)/100),max_runners)
+          target_runner_count = max(min(math.ceil(active_runners_count*(100+target_free_runners)/100),max_runners),min_runners)
           non_failed_runner_count = sum(vm.provisioning_state != 'Failed' for vm in vmss)
-          if target_runner_count <= non_failed_runner_count:
+          if target_runner_count >= non_failed_runner_count:
               app.logger.info("Re-imaging runner {0} to keep capacity (current={1}, target={2}).".format(runner , non_failed_runner_count, target_runner_count))
               compute_client.virtual_machine_scale_set_vms.begin_reimage(resource_group_name=resource_group,vm_scale_set_name=vmss_name, instance_id=instance_id)
           else:
