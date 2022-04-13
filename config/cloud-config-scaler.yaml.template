@@ -23,7 +23,7 @@ write_files:
   - path: /home/$USER_NAME/app/app.py
     permissions: "0644"
     content: |
-      import os, requests, json, math, ipaddress
+      import os, requests, json, math, ipaddress, logging
       from datetime import datetime, timezone
       from azure.mgmt.storage import StorageManagementClient
       from azure.storage.queue import QueueClient
@@ -59,6 +59,11 @@ write_files:
       storage_connection_string = "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName={0};AccountKey={1}".format(storage_account_name,keys.keys[0].value)
       queue_client = QueueClient(account_url="https://{0}.queue.core.windows.net/".format(storage_account_name), queue_name = vmss_name, credential=credential)
 
+      if __name__ != '__main__':
+          gunicorn_logger = logging.getLogger('gunicorn.error')
+          app.logger.handlers = gunicorn_logger.handlers
+          app.logger.setLevel(gunicorn_logger.level)
+
 
       @app.errorhandler(HTTPException)
       def handle_exception(e):
@@ -85,7 +90,7 @@ write_files:
               url = "https://api.github.com/repos/{0}/actions/runners/registration-token".format(github_repo)
               headers = {'Authorization': "token {0}".format(github_pat)}
               response = requests.post(url, headers=headers)
-              if response.status_code != 201: 
+              if response.status_code != 201:
                   return "Could not retrieve Github Runner token", 500
               runner_token = response.json()
           return runner_token['token']
@@ -103,7 +108,7 @@ write_files:
           target_runner_count = min(math.ceil(active_runners_count*(100+target_free_runners)/100),max_runners)
           non_failed_runner_count = sum(vm.provisioning_state != 'Failed' for vm in vmss)
           if target_runner_count > non_failed_runner_count:
-              print("Adding {0} instances to scale set (current={1}, target={2}).".format(target_runner_count-non_failed_runner_count, non_failed_runner_count, target_runner_count))
+              app.logger.info("Adding {0} instances to scale set (current={1}, target={2}).".format(target_runner_count-non_failed_runner_count, non_failed_runner_count, target_runner_count))
               scale_set = compute_client.virtual_machine_scale_sets.get(resource_group_name=resource_group,vm_scale_set_name=vmss_name)
               scale_set.sku.capacity = target_runner_count + (total_runners_count - non_failed_runner_count)
               compute_client.virtual_machine_scale_sets.begin_update(resource_group_name=resource_group,vm_scale_set_name=vmss_name,parameters=scale_set)
@@ -118,17 +123,16 @@ write_files:
           for vm in vmss:
               if vm.os_profile.computer_name == runner:
                   instance_id = vm.instance_id
-          print(receipt_info)
           queue_client.delete_message(receipt_info.split('|')[0], receipt_info.split('|')[1], timeout=10)
           queue_properties = queue_client.get_queue_properties(timeout=10)
           active_runners_count = queue_properties.approximate_message_count
           target_runner_count = min(math.ceil(active_runners_count*(100+target_free_runners)/100),max_runners)
           non_failed_runner_count = sum(vm.provisioning_state != 'Failed' for vm in vmss)
           if target_runner_count <= non_failed_runner_count:
-              print("Re-imaging runner {0} to keep capacity (current={1}, target={2}).".format(runner , non_failed_runner_count, target_runner_count))
+              app.logger.info("Re-imaging runner {0} to keep capacity (current={1}, target={2}).".format(runner , non_failed_runner_count, target_runner_count))
               compute_client.virtual_machine_scale_set_vms.begin_reimage(resource_group_name=resource_group,vm_scale_set_name=vmss_name, instance_id=instance_id)
           else:
-              print("Deleting runner {0} to reduce capacity (current={1}, target={2}).".format(runner , non_failed_runner_count, target_runner_count))
+              app.logger.info("Deleting runner {0} to reduce capacity (current={1}, target={2}).".format(runner , non_failed_runner_count, target_runner_count))
               compute_client.virtual_machine_scale_set_vms.begin_delete(resource_group_name=resource_group,vm_scale_set_name=vmss_name, instance_id=instance_id)
           return "Accepted", 202
 
@@ -140,7 +144,6 @@ write_files:
 
       if __name__ == '__main__':
           app.run(debug=True, host='0.0.0.0')
-
 
   - path: /etc/systemd/system/ghscaler.service
     permissions: "0644"
@@ -163,7 +166,7 @@ write_files:
       Environment="MAX_RUNNERS=$MAX_RUNNERS"
       Environment="TARGET_AVAILABLE_RUNNERS_PERCENT=$TARGET_AVAILABLE_RUNNERS_PERCENT"
       Environment="VNET_CIDR=$VNET_CIDR"
-      ExecStart=gunicorn -w 3 -b 0.0.0.0:5000 app:app
+      ExecStart=gunicorn --capture-output --log-level debug --error-logfile - -w 3 -b 0.0.0.0:5000 app:app
       Restart=always
       RestartSec=60
 

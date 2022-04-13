@@ -4,7 +4,7 @@ write_files:
     permissions: "0555"
     content: |
       RECEIPT=$(curl -s http://$SCALER_IP:5000/start/$(hostname))
-      echo "RECEIPT=$RECEIPT" > /actions-runner/.registration
+      echo "RECEIPT='$RECEIPT'" > /actions-runner/.registration
 
   - path: /hooks/job-completed.sh
     permissions: "0555"
