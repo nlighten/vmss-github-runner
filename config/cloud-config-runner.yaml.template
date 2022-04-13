@@ -1,0 +1,29 @@
+#cloud-config:
+write_files:
+  - path: /hooks/job-started.sh
+    permissions: "0555"
+    content: |
+      RECEIPT=$(curl -s http://$SCALER_IP:5000/start/$(hostname))
+      echo "RECEIPT='$RECEIPT'" > /actions-runner/.registration
+
+  - path: /hooks/job-completed.sh
+    permissions: "0555"
+    content: |
+      source /actions-runner/.registration
+      curl -s http://$SCALER_IP:5000/stop/$(hostname)/$RECEIPT
+
+
+runcmd:
+  - RUNNER_VERSION=$(curl --silent https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name | cut -c 2-)
+  - RUNNER_TOKEN=$(curl --silent http://$SCALER_IP:5000/runnertoken)
+  - mkdir /actions-runner
+  - cd /actions-runner
+  - curl -s -O -L https://github.com/actions/runner/releases/download/v$RUNNER_VERSION/actions-runner-linux-x64-$RUNNER_VERSION.tar.gz
+  - tar xzf ./actions-runner-linux-x64-$RUNNER_VERSION.tar.gz
+  - echo "ACTIONS_RUNNER_HOOK_JOB_STARTED=/hooks/job-started.sh" >> /actions-runner/.env
+  - echo "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/hooks/job-completed.sh" >> /actions-runner/.env
+  - RUNNER_ALLOW_RUNASROOT=1 ./config.sh --url https://github.com/$GITHUB_REPO --token $RUNNER_TOKEN --ephemeral  --labels $LABELS
+  - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh install 
+  - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh start
+  - RUNNER_ALLOW_RUNASROOT=1 ./svc.sh status
+  - chown -R $USER_NAME /actions-runner

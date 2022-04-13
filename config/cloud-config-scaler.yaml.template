@@ -1,0 +1,179 @@
+#cloud-config:
+package_update: true
+package_upgrade: true
+
+packages: 
+  - python3-pip
+
+write_files:
+  - path: /home/$USER_NAME/app/requirements.txt
+    permissions: "0644"
+    content: |
+      Flask==2.0.2
+      gunicorn==20.1.0
+      azure-identity==1.7.1
+      azure-keyvault-secrets==4.3.0
+      azure-keyvault-keys==4.4.0
+      azure-keyvault-certificates==4.3.0
+      azure-mgmt-resource==21.0.0
+      azure-mgmt-compute==26.1.0
+      azure-mgmt-storage==20.0.0   
+      azure-storage-queue==12.2.0
+
+  - path: /home/$USER_NAME/app/app.py
+    permissions: "0644"
+    content: |
+      import os, requests, json, math, ipaddress, logging
+      from datetime import datetime, timezone
+      from azure.mgmt.storage import StorageManagementClient
+      from azure.storage.queue import QueueClient
+      from azure.identity import DefaultAzureCredential
+      from azure.keyvault.secrets import SecretClient
+      from azure.mgmt.compute import ComputeManagementClient
+
+      from flask import Flask, abort, request
+      from werkzeug.exceptions import HTTPException
+
+      app = Flask(__name__)
+      app.logger.info('Init')
+      runner_token = {}
+      credential = DefaultAzureCredential()
+      vault_url = os.environ['KEY_VAULT_URL']
+      github_pat_secret_name = os.environ.get('GITHUB_PAT_SECRET_NAME', 'github-pat')
+      github_repo = os.environ['GITHUB_REPO']
+      subscription_id = os.environ['SUBSCRIPTION_ID']
+      resource_group = os.environ['RESOURCE_GROUP']
+      vmss_name = os.environ['VMSS_NAME']
+      storage_account_name = os.environ['STORAGE_ACCOUNT_NAME']
+      min_runners = int(os.environ.get('MIN_RUNNERS', '1'))
+      max_runners = int(os.environ.get('MAX_RUNNERS', '4'))
+      target_free_runners = int(os.environ.get('TARGET_AVAILABLE_RUNNERS_PERCENT', '25'))
+      vnet_cidr = os.environ.get('VNET_CIDR', '0.0.0.0/0')
+
+      secret_client = SecretClient(vault_url=vault_url, credential=credential)
+      github_pat = secret_client.get_secret(github_pat_secret_name).value
+      compute_client = ComputeManagementClient(credential, subscription_id)
+      storage_client = StorageManagementClient(credential, subscription_id)
+
+      keys = storage_client.storage_accounts.list_keys(resource_group, storage_account_name)
+      storage_connection_string = "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName={0};AccountKey={1}".format(storage_account_name,keys.keys[0].value)
+      queue_client = QueueClient(account_url="https://{0}.queue.core.windows.net/".format(storage_account_name), queue_name = vmss_name, credential=credential)
+
+      if __name__ != '__main__':
+          gunicorn_logger = logging.getLogger('gunicorn.error')
+          app.logger.handlers = gunicorn_logger.handlers
+          app.logger.setLevel(gunicorn_logger.level)
+
+
+      @app.errorhandler(HTTPException)
+      def handle_exception(e):
+          response = e.get_response()
+          response.data = json.dumps({
+              "code": e.code,
+              "name": e.name,
+              "description": e.description,
+          })
+          response.content_type = "application/json"
+          return response
+
+      @app.before_request
+      def limit_remote_addr():
+          if not ipaddress.ip_address(request.remote_addr) in ipaddress.ip_network(vnet_cidr):
+              abort(401, description="Remote ip {0} not allowed".format(request.remote_addr))
+
+
+      @app.route('/runnertoken', methods=['GET'])
+      def run_post():
+          global runner_token
+          if not runner_token or runner_token_expired(runner_token, 60):
+              app.logger.info('Requesting new runner token through Github API')
+              url = "https://api.github.com/repos/{0}/actions/runners/registration-token".format(github_repo)
+              headers = {'Authorization': "token {0}".format(github_pat)}
+              response = requests.post(url, headers=headers)
+              if response.status_code != 201:
+                  return "Could not retrieve Github Runner token", 500
+              runner_token = response.json()
+          return runner_token['token']
+
+
+      @app.route('/start/<runner>', methods=['GET'])
+      def start(runner):
+          vmss = list(compute_client.virtual_machine_scale_set_vms.list(resource_group_name=resource_group,virtual_machine_scale_set_name=vmss_name))
+          if sum(vm.os_profile.computer_name == runner for vm in vmss) != 1:
+              abort(404, description="Runner with computer name {0} is not found".format(runner))
+          response = queue_client.send_message(content=runner, time_to_live=3600, timeout=10)
+          total_runners_count = len(vmss)
+          queue_properties = queue_client.get_queue_properties(timeout=10)
+          active_runners_count = queue_properties.approximate_message_count
+          target_runner_count = min(math.ceil(active_runners_count*(100+target_free_runners)/100),max_runners)
+          non_failed_runner_count = sum(vm.provisioning_state != 'Failed' for vm in vmss)
+          if target_runner_count > non_failed_runner_count:
+              app.logger.info("Adding {0} instances to scale set (current={1}, target={2}).".format(target_runner_count-non_failed_runner_count, non_failed_runner_count, target_runner_count))
+              scale_set = compute_client.virtual_machine_scale_sets.get(resource_group_name=resource_group,vm_scale_set_name=vmss_name)
+              scale_set.sku.capacity = target_runner_count + (total_runners_count - non_failed_runner_count)
+              compute_client.virtual_machine_scale_sets.begin_update(resource_group_name=resource_group,vm_scale_set_name=vmss_name,parameters=scale_set)
+          return "{0}|{1}".format(response.id, response.pop_receipt), 202
+
+
+      @app.route('/stop/<runner>/<receipt_info>', methods=['GET'])
+      def stop(runner, receipt_info):
+          vmss = list(compute_client.virtual_machine_scale_set_vms.list(resource_group_name=resource_group,virtual_machine_scale_set_name=vmss_name))
+          if sum(vm.os_profile.computer_name == runner for vm in vmss) != 1:
+              abort(404, description="Runner with computer name {0} is not found".format(runner))
+          for vm in vmss:
+              if vm.os_profile.computer_name == runner:
+                  instance_id = vm.instance_id
+          queue_client.delete_message(receipt_info.split('|')[0], receipt_info.split('|')[1], timeout=10)
+          queue_properties = queue_client.get_queue_properties(timeout=10)
+          active_runners_count = queue_properties.approximate_message_count
+          target_runner_count = max(min(math.ceil(active_runners_count*(100+target_free_runners)/100),max_runners),min_runners)
+          non_failed_runner_count = sum(vm.provisioning_state != 'Failed' for vm in vmss)
+          if target_runner_count >= non_failed_runner_count:
+              app.logger.info("Re-imaging runner {0} to keep capacity (current={1}, target={2}).".format(runner , non_failed_runner_count, target_runner_count))
+              compute_client.virtual_machine_scale_set_vms.begin_reimage(resource_group_name=resource_group,vm_scale_set_name=vmss_name, instance_id=instance_id)
+          else:
+              app.logger.info("Deleting runner {0} to reduce capacity (current={1}, target={2}).".format(runner , non_failed_runner_count, target_runner_count))
+              compute_client.virtual_machine_scale_set_vms.begin_delete(resource_group_name=resource_group,vm_scale_set_name=vmss_name, instance_id=instance_id)
+          return "Accepted", 202
+
+
+      def runner_token_expired(token, margin_in_seconds):
+          expires = datetime.fromisoformat(token['expires_at'])
+          return (expires-datetime.now(timezone.utc)).total_seconds() < margin_in_seconds
+
+
+      if __name__ == '__main__':
+          app.run(debug=True, host='0.0.0.0')
+
+  - path: /etc/systemd/system/ghscaler.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Github Runner Scaler
+      After=network.target
+
+      [Service]
+      User=$USER_NAME
+      WorkingDirectory=/home/$USER_NAME/app
+      Environment="KEY_VAULT_URL=$KEY_VAULT_URL"
+      Environment="GITHUB_REPO=$GITHUB_REPO"
+      Environment="SUBSCRIPTION_ID=$SUBSCRIPTION_ID"
+      Environment="RESOURCE_GROUP=$RESOURCE_GROUP"
+      Environment="VMSS_NAME=$VMSS_NAME"
+      Environment="STORAGE_ACCOUNT_NAME=$STORAGE_ACCOUNT_NAME"
+      Environment="USER_NAME=$USER_NAME"
+      Environment="MIN_RUNNERS=$MIN_RUNNERS"
+      Environment="MAX_RUNNERS=$MAX_RUNNERS"
+      Environment="TARGET_AVAILABLE_RUNNERS_PERCENT=$TARGET_AVAILABLE_RUNNERS_PERCENT"
+      Environment="VNET_CIDR=$VNET_CIDR"
+      ExecStart=gunicorn --capture-output --log-level debug --error-logfile - -w 3 -b 0.0.0.0:5000 app:app
+      Restart=always
+      RestartSec=60
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - pip install -r home/$USER_NAME/app/requirements.txt
+  - systemctl daemon-reload
+  - systemctl start ghscaler

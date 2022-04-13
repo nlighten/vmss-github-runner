@@ -69,8 +69,10 @@ az vmss create `
         --eviction-policy Delete `
         --max-price -1 `
         --instance-count $InstanceCount `
-        --custom-data ./config/cloud-config.yaml `
+        --custom-data ./config/cloud-config-runner.yaml `
         --subnet $SubnetId `
         --load-balancer '""' `
         --disable-overprovision `
         --location westeurope
+
+#       --vm-sku Standard_B1s `
