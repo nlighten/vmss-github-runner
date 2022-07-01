@@ -95,7 +95,7 @@ jobs:
       # if: ${{ github.event.inputs.build-image == true }}
       shell: pwsh
       run: |
-        ./virtual-environments/images.CI/linux-and-win/build-image.ps1
+        ./virtual-environments/images.CI/linux-and-win/build-image.ps1 `
             -ResourcesNamePrefix ${{ env.image-display-name }} `
             -ClientId ${{ secrets.AZURE_CLIENT_ID }} `
             -ClientSecret  ${{ secrets.AZURE_CLIENT_SECRET }} `
