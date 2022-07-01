@@ -59,7 +59,7 @@ name: VmssGithubRunner
 jobs:
   build-runner-image:
     runs-on: ubuntu-latest
-    env:
+    # env:
       # PACKER_LOG: 10
       # ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       # ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
