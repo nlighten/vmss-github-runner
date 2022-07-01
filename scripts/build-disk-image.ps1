@@ -43,9 +43,12 @@ packer --version
 
 
 if ($UseAzureCliLogin) {
+    Write-Host "Using Azure CLI loging"
     # We replace the client_id builder parameters and force to use azure cli instead.
     ((Get-Content -path $TemplatePath -Raw) -replace '"client_id": "{{user `client_id`}}",', '"use_azure_cli_auth": true,') | Set-Content -Path $TemplatePath
 }
+Get-Content -path $TemplatePath -Raw
+
 
 # Build image with packer
 Write-Host "Build $Image VM"
