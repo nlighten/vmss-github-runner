@@ -13,6 +13,10 @@ param(
     [Int]    [Parameter(Mandatory = $false)]  $MaxRetries = 1
 )
 
+pwd
+ls
+ls  $TemplatePath
+
 if (-not (Test-Path $TemplatePath)) {
     Write-Error "'-TemplatePath' parameter is not valid. You have to specify correct Template Path"
     exit 1

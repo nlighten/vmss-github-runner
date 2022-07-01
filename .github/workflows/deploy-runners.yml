@@ -51,7 +51,7 @@ env:
   subnet: snet-github-runners
   blob-container-name: system
   image-display-name: ubuntu20
-  image-template-path: /images/linux/ubuntu2004.json
+  image-template-path: ./images/linux/ubuntu2004.json
   use-public-ip-for-image-build: false
 
 
