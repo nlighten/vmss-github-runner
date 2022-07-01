@@ -9,13 +9,9 @@ param(
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkRG,
     [String] [Parameter (Mandatory = $true)]  $VirtualNetworkSubnet,
     [String] [Parameter (Mandatory = $false)] $UsePublicIp = "false",
-    [Bool]   [Parameter (Mandatory = $false)] $UseAzureCliLogin = $true,
+    [Bool]   [Parameter (Mandatory = $false)] $UseAzureCliLogin = $false,
     [Int]    [Parameter(Mandatory = $false)]  $MaxRetries = 1
 )
-
-pwd
-ls
-ls  $TemplatePath
 
 if (-not (Test-Path $TemplatePath)) {
     Write-Error "'-TemplatePath' parameter is not valid. You have to specify correct Template Path"

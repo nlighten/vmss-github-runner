@@ -59,6 +59,12 @@ name: VmssGithubRunner
 jobs:
   build-runner-image:
     runs-on: ubuntu-latest
+    env:
+      # ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      # ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      # ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
     steps:
     - uses: actions/checkout@v3
 
@@ -89,17 +95,20 @@ jobs:
       # if: ${{ github.event.inputs.build-image == true }}
       shell: pwsh
       run: |
-        ./scripts/build-disk-image.ps1 `
-                       -ResourcesNamePrefix ${{ env.image-display-name }} `
-                       -TemplatePath ${{ env.image-template-path }} `
-                       -ResourceGroup ${{ env.runner-resource-group }} `
-                       -StorageAccount ${{ env.blob-storage-account }} `
-                       -UsePublicIp ${{ env.use-public-ip-for-image-build }} `
-                       -VirtualNetworkName ${{ env.vnet }} `
-                       -VirtualNetworkRG ${{ env.vnet-resource-group }} `
-                       -VirtualNetworkSubnet ${{ env.subnet }} `
-                       -Location westeurope `
-
+        ./virtual-environments/images.CI/linux-and-win/build-image.ps1
+            -ResourcesNamePrefix ${{ env.image-display-name }} `
+            -ClientId ${{ secrets.AZURE_CLIENT_ID }} `
+            -ClientSecret  ${{ secrets.AZURE_CLIENT_SECRET }} `
+            -TemplatePath ${{ env.image-template-path }} `
+            -ResourceGroup ${{ env.runner-resource-group }} `
+            -StorageAccount ${{ env.blob-storage-account }} `
+            -SubscriptionId ${{ secrets.AZURE_SUBSCRIPTION_ID }} `
+            -TenantId ${{ secrets.AZURE_TENANT_ID }} `
+            -Location westeurope `
+            -UsePublicIp ${{ env.use-public-ip-for-image-build }} `
+            -VirtualNetworkName ${{ env.vnet }} `
+            -VirtualNetworkRG ${{ env.vnet-resource-group }} `
+            -VirtualNetworkSubnet ${{ env.subnet }} `
 
     - name: Create VM image from Disk image
       # if: ${{ github.event.inputs.build-image == true }}
