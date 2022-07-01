@@ -59,7 +59,8 @@ name: VmssGithubRunner
 jobs:
   build-runner-image:
     runs-on: ubuntu-latest
-    # env:
+    env:
+      PRIVATE_VIRTUAL_NETWORK_WITH_PUBLIC_IP: true
       # PACKER_LOG: 10
       # ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       # ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
