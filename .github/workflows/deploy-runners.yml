@@ -94,7 +94,7 @@ jobs:
                        -TemplatePath ${{ env.image-template-path }} `
                        -ResourceGroup ${{ env.runner-resource-group }} `
                        -StorageAccount ${{ env.blob-storage-account }} `
-                       -UsePublicIp ${{ env.use-public-ip-for-image-build }}
+                       -UsePublicIp ${{ env.use-public-ip-for-image-build }} `
                        -VirtualNetworkName ${{ env.vnet }} `
                        -VirtualNetworkRG ${{ env.vnet-resource-group }} `
                        -VirtualNetworkSubnet ${{ env.subnet }} `
