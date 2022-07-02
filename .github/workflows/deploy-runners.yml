@@ -129,9 +129,9 @@ jobs:
         envsubst '$KEY_VAULT_URL,$GITHUB_REPO,$SUBSCRIPTION_ID,$RESOURCE_GROUP,$VMSS_NAME,$STORAGE_ACCOUNT_NAME,$USER_NAME,$MIN_RUNNERS,$MAX_RUNNERS,$TARGET_AVAILABLE_RUNNERS_PERCENT,$VNET_CIDR'< config/cloud-config-scaler.yaml.template > config/cloud-config-scaler.yaml
         cat config/cloud-config-scaler.yaml
       env:
-        KEY_VAULT_URL: https://vmssrunnerkeyvault.vault.azure.net/
+        KEY_VAULT_URL: https://ghrunnerkv.vault.azure.net/
         GITHUB_REPO: ${{ github.event.inputs.github-repo }}
-        SUBSCRIPTION_ID: 112e1628-4525-4638-9ce0-8e8757144034
+        SUBSCRIPTION_ID: f0128488-bc19-4cfe-9097-3bac2863762b
         RESOURCE_GROUP: ${{ env.runner-resource-group }}
         VMSS_NAME: ${{ github.event.inputs.vmss-runner-name }}
         STORAGE_ACCOUNT_NAME: ${{ env.queue-storage-account }}
