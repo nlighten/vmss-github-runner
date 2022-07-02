@@ -94,7 +94,7 @@ jobs:
 
 
     - name: Build image using Packer
-      # if: ${{ github.event.inputs.build-image == true }}
+      if: github.event.inputs.build-image == true
       shell: pwsh
       run: |
         ./virtual-environments/images.CI/linux-and-win/build-image.ps1 `
@@ -112,7 +112,7 @@ jobs:
             -VirtualNetworkSubnet ${{ env.subnet }} `
 
     - name: Create VM image from Disk image
-      # if: ${{ github.event.inputs.build-image == true }}
+      if: github.event.inputs.build-image == true
       shell: pwsh
       run: |
         ./scripts/create-vm-image.ps1 `
