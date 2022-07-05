@@ -69,6 +69,7 @@ jobs:
 
     - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag
       if: github.event.inputs.build-image
+      shell: pwsh
       run: |
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
 
