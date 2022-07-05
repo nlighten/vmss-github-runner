@@ -68,13 +68,12 @@ jobs:
         az storage container create --name ${{ env.terraform-container-name }} --account-name ${{ env.terraform-storage-account }}  --resource-group ${{ env.runner-resource-group }}
 
     - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag
-      if: github.event.inputs.build-image == true
-      shell: pwsh
+      if: github.event.inputs.build-image
       run: |
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
 
     - name: Build image using Packer
-      if: github.event.inputs.build-image == "true"
+      if: github.event.inputs.build-image
       shell: pwsh
       run: |
         ./virtual-environments/images.CI/linux-and-win/build-image.ps1 `
