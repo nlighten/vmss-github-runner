@@ -63,7 +63,7 @@ jobs:
       run: |
         # Todo: private endpoints
         az storage account create --name ${{ env.image-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Premium_LRS --location ${{  github.event.inputs.location }} --min-tls-version TLS1_2
-        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ env.image-storage-account }}  --resource-group ${{ env.runner-resource-group }}
+        az storage container create --name ${{ env.image-container-name }} --account-name ${{ env.image-storage-account }}  --resource-group ${{ env.runner-resource-group }}
         az storage account create --name ${{ env.terraform-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Standard_LRS --location ${{  github.event.inputs.location }} --min-tls-version TLS1_2
         az storage container create --name ${{ env.terraform-container-name }} --account-name ${{ env.terraform-storage-account }}  --resource-group ${{ env.runner-resource-group }}
 
