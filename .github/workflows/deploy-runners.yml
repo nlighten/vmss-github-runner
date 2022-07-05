@@ -74,7 +74,7 @@ jobs:
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
 
     - name: Build image using Packer
-      if: github.event.inputs.build-image == true
+      if: github.event.inputs.build-image == "true"
       shell: pwsh
       run: |
         ./virtual-environments/images.CI/linux-and-win/build-image.ps1 `
