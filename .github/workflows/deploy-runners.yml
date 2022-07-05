@@ -102,52 +102,52 @@ jobs:
                       -ImageDisplayName ${{ env.image-display-name }} `
                       -DateQuery latest
 
-      - name: Setup Terraform
-        id: terraform-setup
-        uses: hashicorp/setup-terraform@v1
+    - name: Setup Terraform
+      id: terraform-setup
+      uses: hashicorp/setup-terraform@v1
 
-      - name: Terraform Init
-        id: terraform-init
-        run: |
-          terraform -chdir=terraform init \
-              -backend-config="key=ghrunner-${{  github.event.inputs.location }}.tfstate" \
-              -backend-config="resource_group_name=${{ env.runner-resource-group }}" \
-              -backend-config="storage_account_name=${{ env.image-storage-account }}"
+    - name: Terraform Init
+      id: terraform-init
+      run: |
+        terraform -chdir=terraform init \
+            -backend-config="key=ghrunner-${{  github.event.inputs.location }}.tfstate" \
+            -backend-config="resource_group_name=${{ env.runner-resource-group }}" \
+            -backend-config="storage_account_name=${{ env.image-storage-account }}"
 
-      - name: Terraform Format
-        id: terraform-fmt
-        run: terraform -chdir=terraform fmt -check
+    - name: Terraform Format
+      id: terraform-fmt
+      run: terraform -chdir=terraform fmt -check
 
-      - name: Terraform Validate
-        id: terraform-validate
-        run: terraform -chdir=terraform validate
+    - name: Terraform Validate
+      id: terraform-validate
+      run: terraform -chdir=terraform validate
 
-      - name: Terraform Plan
-        id: terraform-plan
-        run: |
-          terraform -chdir=terraform plan -input=false \
-              --var-file=default.tfvars \
-              --var-file=ae.tfvars \
-              -var='vnet=${{env.vnet-name }}' \
-              -var='subnet=${{env.subnet-name }}' \
-              -var='vnet_resource_group=${{env.vnet-resource-group }}' \
-              -var='runner_resource_group=${{ env.runner-resource-group }}' \
-              -var='location=${{ github.event.inputs.location }}' \
-              -var='admin_pwd=${{ secrets.ADMIN_PWD }}' \
-              -var='runner_image_name=${{ steps.create-image.outputs.image-name }}'
+    - name: Terraform Plan
+      id: terraform-plan
+      run: |
+        terraform -chdir=terraform plan -input=false \
+            --var-file=default.tfvars \
+            --var-file=ae.tfvars \
+            -var='vnet=${{env.vnet-name }}' \
+            -var='subnet=${{env.subnet-name }}' \
+            -var='vnet_resource_group=${{env.vnet-resource-group }}' \
+            -var='runner_resource_group=${{ env.runner-resource-group }}' \
+            -var='location=${{ github.event.inputs.location }}' \
+            -var='admin_pwd=${{ secrets.ADMIN_PWD }}' \
+            -var='runner_image_name=${{ steps.create-image.outputs.image-name }}'
 
-      - name: Terraform apply
-        id: terraform-apply
-        if: github.event.inputs.terraform-action == 'plan+apply'
-        run: |
-          terraform -chdir=terraform apply -input=false --auto-approve \
-              --var-file=default.tfvars \
-              --var-file=ae.tfvars \
-              -var='vnet=${{env.vnet-name }}' \
-              -var='subnet=${{env.subnet-name }}' \
-              -var='vnet_resource_group=${{env.vnet-resource-group }}' \
-              -var='runner_resource_group=${{ env.runner-resource-group }}' \
-              -var='location=${{ github.event.inputs.location }}' \
-              -var='admin_pwd=${{ secrets.ADMIN_PWD }}' \
-              -var='runner_image_name=${{ steps.create-image.outputs.image-name }}'
+    - name: Terraform apply
+      id: terraform-apply
+      if: github.event.inputs.terraform-action == 'plan+apply'
+      run: |
+        terraform -chdir=terraform apply -input=false --auto-approve \
+            --var-file=default.tfvars \
+            --var-file=ae.tfvars \
+            -var='vnet=${{env.vnet-name }}' \
+            -var='subnet=${{env.subnet-name }}' \
+            -var='vnet_resource_group=${{env.vnet-resource-group }}' \
+            -var='runner_resource_group=${{ env.runner-resource-group }}' \
+            -var='location=${{ github.event.inputs.location }}' \
+            -var='admin_pwd=${{ secrets.ADMIN_PWD }}' \
+            -var='runner_image_name=${{ steps.create-image.outputs.image-name }}'
 
