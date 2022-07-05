@@ -1,0 +1,50 @@
+
+#cloud-config:
+package_update: true
+package_upgrade: true
+
+packages: 
+  - python3-pip
+
+write_files:
+  - path: /home/${run_as_user}/app/requirements.txt
+    permissions: "0644"
+    content: |
+      ${app_requirements}
+
+  - path: /home/${run_as_user}/app/app.py
+    permissions: "0644"
+    content: |
+      ${app_code}
+
+  - path: /etc/systemd/system/${run_as_user}.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Github Runner Scaler
+      After=network.target
+
+      [Service]
+      User=${run_as_user}
+      WorkingDirectory=/home/${run_as_user}/app
+      Environment="KEY_VAULT_URL=${keyvault_url}"
+      Environment="GITHUB_REPO=${github_repo}"
+      Environment="SUBSCRIPTION_ID=${subscription_id}"
+      Environment="RESOURCE_GROUP=${resource_group}"
+      Environment="VMSS_NAME=${runner_vmss_name}"
+      Environment="STORAGE_ACCOUNT_NAME=${storage_account_name}"
+      Environment="MIN_RUNNERS=${min_runners}"
+      Environment="MAX_RUNNERS=${max_runners}"
+      Environment="TARGET_AVAILABLE_RUNNERS_PERCENT=${target_available_runners_percent}"
+      ExecStart=gunicorn --capture-output --log-level ${log_level} --access-logfile - --error-logfile - -w 3 -b 0.0.0.0:5000 app:app
+      Restart=always
+      RestartSec=60
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - useradd -u 888 -m ${run_as_user}
+  - pip install -r home/${run_as_user}/app/requirements.txt
+  - systemctl daemon-reload
+  - systemctl start ${run_as_user}

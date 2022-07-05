@@ -37,15 +37,20 @@ if ($DateQuery.Equals("latest")) {
 $ImageBlobUri='https://{0}.blob.core.windows.net/{1}/{2}' -f $StorageAccount, $ContainerName, $ImageBlob.name
 $ImageName = 'DevOpsImage-{0}-{1}' -f $ImageDisplayName, $ImageBlob.time.toString("yyyy-MM-dd")
 
-# Create the vm image
-az image create --name $ImageName `
-                --resource-group $ResourceGroup `
-                --source $ImageBlobUri `
-                --os-type Linux `
-                --os-disk-caching ReadWrite `
-                --storage-sku $Sku `
-                --location westeurope
-
+if (-not ($imageId = az image list --query "[?name=='$ImageName'].id" -o tsv)) {
+    Write-Output "Creating new image with name $ImageName."
+    # Create the vm image
+    az image create --name $ImageName `
+                    --resource-group $ResourceGroup `
+                    --source $ImageBlobUri `
+                    --os-type Linux `
+                    --os-disk-caching ReadWrite `
+                    --storage-sku $Sku `
+                    --location westeurope
+} else {
+    Write-Output "Image with name $ImageName already exists. No need to create it."
+}
+Write-Output "::set-output name=image-name::$ImageName"
 # TODO: cleanup old images
 
 

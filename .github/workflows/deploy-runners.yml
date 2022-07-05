@@ -6,92 +6,72 @@ on:
         type: boolean
         default: false
         required: true
-      vmss-runner-name:
-        description: 'Name of the scale-set for the github runners'
-        type: string
-        default: vmss-github-runners-001
-        required: true
-      vm-scaler-name:
-        description: 'Name of the vm runner the scaler'
-        type: string
-        default: vm-github-scaler-001
-        required: true
-      github-repo:
-        description: 'Name of the github repo where runners should be registered'
-        type: string
-        default: nlighten/vmss-github-runner
-        required: true
-      runner-labels:
-        description: 'Comma separated list of labels'
-        type: string
-        default: foo,bar
-        required: true
-      pool-min-instances:
-        description: 'Minimum number of instances in the runner pool (>= 1)'
-        type: number
-        default: 1
-        required: true
-      pool-max-instances:
-        description: 'Maximum number of instances in the runner pool'
-        type: number
-        default: 4
-        required: true
-      pool-free-target-percentage:
-        description: 'Target percentage of free/available runners'
-        type: number
-        default: 25
-        required: true
+      location:
+        description: 'Location'
+        type: choice
+        options:
+          - 'westeurope'
+          - 'francecentral'
+      terraform-action:
+        description: 'Terraform action'
+        type: choice
+        options:
+          - 'plan'
+          - 'plan+apply'
+      runner:
+        description: 'runner'
+        type: choice
+        options:
+          - 'ubuntu-latest'
+          - 'self-hosted'
 
 env:
   runner-resource-group: rg-vmss-github-runner
   vnet-resource-group: rg-vnet-default
-  blob-storage-account: stgithubrunnerdemo
-  queue-storage-account: stgithubrunnerqueue
-  vnet: vnet-default
-  subnet: snet-github-runners
-  blob-container-name: system
+  image-storage-account: stghrunnerimage
+  queue-storage-account: stghrunnerqueue
+  terraform-storage-account: stghrunnertfstate
+  image-container-name: system
+  terraform-container-name: tfstate
+  vnet-name: vnet-default
+  subnet-name: snet-github-runners
   image-display-name: ubuntu20
   image-template-path: ./virtual-environments/images/linux/ubuntu2004.json
-  use-public-ip-for-image-build: false
 
 
-name: VmssGithubRunner
+name: vmss-self-hosted-runners
 jobs:
   build-runner-image:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner }}
     env:
       PRIVATE_VIRTUAL_NETWORK_WITH_PUBLIC_IP: true
-      # PACKER_LOG: 10
-      # ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      # ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      # ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      # ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
     - uses: actions/checkout@v3
 
-
     - name: Azure Login
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        creds: '{"clientId": "${{ secrets.AZURE_CLIENT_ID }}", "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}", "tenantId": "${{ secrets.AZURE_TENANT_ID }}", "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}"}'
 
+    - name: Ensure storage accounts for images and terraform state exist
+      shell: pwsh
+      run: |
+        # Todo: private endpoints
+        az storage account create --name ${{ env.image-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Premium_LRS --location ${{  github.event.inputs.location }} --min-tls-version TLS1_2
+        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ env.image-storage-account }}  --resource-group ${{ env.runner-resource-group }}
+        az storage account create --name ${{ env.terraform-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Standard_LRS --location ${{  github.event.inputs.location }} --min-tls-version TLS1_2
+        az storage container create --name ${{ env.terraform-container-name }} --account-name ${{ env.terraform-storage-account }}  --resource-group ${{ env.runner-resource-group }}
 
     - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag
-      # if: ${{ github.event.inputs.build-image == true }}
+      if: github.event.inputs.build-image == true
       shell: pwsh
       run: |
         ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
-
-
-    - name: Ensure storage accounts exists
-      shell: pwsh
-      run: |
-        az storage account create --name ${{ env.blob-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Premium_LRS --location westeurope
-        az storage container create --name ${{ env.blob-container-name }} --account-name ${{ env.blob-storage-account }}  --resource-group ${{ env.runner-resource-group }}
-        az storage account create --name ${{ env.queue-storage-account }} --resource-group ${{ env.runner-resource-group }} --location westeurope
-        az storage queue create --name ${{ github.event.inputs.vmss-runner-name }} --account-name ${{ env.queue-storage-account }}
-
 
     - name: Build image using Packer
       if: github.event.inputs.build-image == true
@@ -103,93 +83,71 @@ jobs:
             -ClientSecret  ${{ secrets.AZURE_CLIENT_SECRET }} `
             -TemplatePath ${{ env.image-template-path }} `
             -ResourceGroup ${{ env.runner-resource-group }} `
-            -StorageAccount ${{ env.blob-storage-account }} `
+            -StorageAccount ${{ env.image-storage-account }} `
             -SubscriptionId ${{ secrets.AZURE_SUBSCRIPTION_ID }} `
             -TenantId ${{ secrets.AZURE_TENANT_ID }} `
             -Location westeurope `
-            -VirtualNetworkName ${{ env.vnet }} `
+            -VirtualNetworkName ${{ env.vnet-name }} `
             -VirtualNetworkRG ${{ env.vnet-resource-group }} `
-            -VirtualNetworkSubnet ${{ env.subnet }} `
+            -VirtualNetworkSubnet ${{ env.subnet-name }} `
 
     - name: Create VM image from Disk image
-      if: github.event.inputs.build-image == true
+      id: create-image
       shell: pwsh
       run: |
         ./scripts/create-vm-image.ps1 `
-                      -StorageAccount ${{ env.blob-storage-account }} `
-                      -ContainerName ${{ env.blob-container-name }} `
+                      -StorageAccount ${{ env.image-storage-account }} `
+                      -ContainerName ${{ env.image-container-name }} `
                       -ResourceGroup ${{ env.runner-resource-group }} `
                       -ImageDisplayName ${{ env.image-display-name }} `
                       -DateQuery latest
 
+      - name: Setup Terraform
+        id: terraform-setup
+        uses: hashicorp/setup-terraform@v1
 
-    - name: Create cloud-config for scaler 
-      shell: bash
-      run: |
-        envsubst '$KEY_VAULT_URL,$GITHUB_REPO,$SUBSCRIPTION_ID,$RESOURCE_GROUP,$VMSS_NAME,$STORAGE_ACCOUNT_NAME,$USER_NAME,$MIN_RUNNERS,$MAX_RUNNERS,$TARGET_AVAILABLE_RUNNERS_PERCENT,$VNET_CIDR'< config/cloud-config-scaler.yaml.template > config/cloud-config-scaler.yaml
-        cat config/cloud-config-scaler.yaml
-      env:
-        KEY_VAULT_URL: https://ghrunnerkv.vault.azure.net/
-        GITHUB_REPO: ${{ github.event.inputs.github-repo }}
-        SUBSCRIPTION_ID: f0128488-bc19-4cfe-9097-3bac2863762b
-        RESOURCE_GROUP: ${{ env.runner-resource-group }}
-        VMSS_NAME: ${{ github.event.inputs.vmss-runner-name }}
-        STORAGE_ACCOUNT_NAME: ${{ env.queue-storage-account }}
-        USER_NAME: ghscaler
-        TARGET_AVAILABLE_RUNNERS_PERCENT: ${{ github.event.inputs.pool-free-target-percentage }}
-        MIN_RUNNERS: ${{ github.event.inputs.pool-min-instances }}
-        MAX_RUNNERS: ${{ github.event.inputs.pool-max-instances }}
-        VNET_CIDR: '0.0.0.0/0'
+      - name: Terraform Init
+        id: terraform-init
+        run: |
+          terraform -chdir=terraform init \
+              -backend-config="key=ghrunner-${{  github.event.inputs.location }}.tfstate" \
+              -backend-config="resource_group_name=${{ env.runner-resource-group }}" \
+              -backend-config="storage_account_name=${{ env.image-storage-account }}"
 
+      - name: Terraform Format
+        id: terraform-fmt
+        run: terraform -chdir=terraform fmt -check
 
-    - name: Create VM
-      id: create-vm
-      shell: pwsh
-      run: |
-        ./scripts/create-scaler-vm.ps1 `
-                      -Vm ${{ github.event.inputs.vm-scaler-name }} `
-                      -User ghscaler `
-                      -Password ${{ secrets.VMSS_PASSWORD }} `
-                      -ResourceGroup ${{ env.runner-resource-group }} `
-                      -VirtualNetworkName ${{ env.vnet }} `
-                      -VirtualNetworkSubnet ${{ env.subnet }} `
-                      -NetworkResourceGroup ${{ env.vnet-resource-group }}
+      - name: Terraform Validate
+        id: terraform-validate
+        run: terraform -chdir=terraform validate
 
+      - name: Terraform Plan
+        id: terraform-plan
+        run: |
+          terraform -chdir=terraform plan -input=false \
+              --var-file=default.tfvars \
+              --var-file=ae.tfvars \
+              -var='vnet=${{env.vnet-name }}' \
+              -var='subnet=${{env.subnet-name }}' \
+              -var='vnet_resource_group=${{env.vnet-resource-group }}' \
+              -var='runner_resource_group=${{ env.runner-resource-group }}' \
+              -var='location=${{ github.event.inputs.location }}' \
+              -var='admin_pwd=${{ secrets.ADMIN_PWD }}' \
+              -var='runner_image_name=${{ steps.create-image.outputs.image-name }}'
 
-    - name: Create cloud-config for runner 
-      shell: bash
-      run: |
-        envsubst '$SCALER_IP,$GITHUB_REPO,$USER_NAME,$LABELS'< config/cloud-config-runner.yaml.template > config/cloud-config-runner.yaml
-      env:
-        SCALER_IP: ${{ steps.create-vm.outputs.scaler-ip }}
-        GITHUB_REPO: ${{ github.event.inputs.github-repo }}
-        USER_NAME: ghrunner
-        LABELS: ${{ github.event.inputs.runner-labels }}
+      - name: Terraform apply
+        id: terraform-apply
+        if: github.event.inputs.terraform-action == 'plan+apply'
+        run: |
+          terraform -chdir=terraform apply -input=false --auto-approve \
+              --var-file=default.tfvars \
+              --var-file=ae.tfvars \
+              -var='vnet=${{env.vnet-name }}' \
+              -var='subnet=${{env.subnet-name }}' \
+              -var='vnet_resource_group=${{env.vnet-resource-group }}' \
+              -var='runner_resource_group=${{ env.runner-resource-group }}' \
+              -var='location=${{ github.event.inputs.location }}' \
+              -var='admin_pwd=${{ secrets.ADMIN_PWD }}' \
+              -var='runner_image_name=${{ steps.create-image.outputs.image-name }}'
 
-
-    - name: Create VMSS 
-      shell: pwsh
-      run: |
-        ./scripts/create-runner-vmss.ps1 `
-                      -VmssName ${{ github.event.inputs.vmss-runner-name }} `
-                      -InstanceCount ${{ github.event.inputs.pool-min-instances }} `
-                      -StorageAccount ${{ env.blob-storage-account }} `
-                      -User ${{ secrets.VMSS_USER }} `
-                      -Password ${{ secrets.VMSS_PASSWORD }} `
-                      -ResourceGroup ${{ env.runner-resource-group }} `
-                      -ImageDisplayName ${{ env.image-display-name }} `
-                      -VirtualNetworkName ${{ env.vnet }} `
-                      -VirtualNetworkSubnet ${{ env.subnet }} `
-                      -NetworkResourceGroup ${{ env.vnet-resource-group }} `
-                      -DateQuery latest
-
-
-    - name: Create Role Assignments 
-      shell: pwsh
-      run: |
-        ./scripts/create-role-assignments.ps1 `
-                      -VmName ${{ github.event.inputs.vm-scaler-name }} `
-                      -VmssName ${{ github.event.inputs.vmss-runner-name }} `
-                      -QueueStorageAccount ${{ env.queue-storage-account }} `
-                      -ResourceGroup ${{ env.runner-resource-group }} `
-                      -NetworkResourceGroup ${{ env.vnet-resource-group }}

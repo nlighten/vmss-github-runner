@@ -1,0 +1,10 @@
+Flask==2.0.2
+gunicorn==20.1.0
+azure-identity==1.7.1
+azure-keyvault-secrets==4.3.0
+azure-keyvault-keys==4.4.0
+azure-keyvault-certificates==4.3.0
+azure-mgmt-resource==21.0.0
+azure-mgmt-compute==26.1.0
+azure-mgmt-storage==20.0.0   
+azure-storage-queue==12.2.0
