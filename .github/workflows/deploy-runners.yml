@@ -89,7 +89,7 @@ jobs:
             -Location westeurope `
             -VirtualNetworkName ${{ env.vnet-name }} `
             -VirtualNetworkRG ${{ env.vnet-resource-group }} `
-            -VirtualNetworkSubnet ${{ env.subnet-name }} `
+            -VirtualNetworkSubnet ${{ env.subnet-name }}
 
     - name: Create VM image from Disk image
       id: create-image
