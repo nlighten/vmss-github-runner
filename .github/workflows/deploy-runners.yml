@@ -7,7 +7,7 @@ on:
         default: false
         required: true
       virtual-environments-tag:
-        description: 'Tag from virtual environments repo?'
+        description: 'Tag from virtual environments repo.'
         type: string
         default: LATEST
         required: true
