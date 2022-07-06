@@ -19,3 +19,4 @@ if ($tag -eq 'LATEST') {
 git clone https://github.com/actions/virtual-environments.git
 Set-Location -Path "virtual-environments"
 git checkout tags/$imageDisplayName/$tag
+Write-Output "::set-output name=virtual-environments-tag::$tag"
