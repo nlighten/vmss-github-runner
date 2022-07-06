@@ -55,6 +55,11 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     steps:
+    - name: Log inputs
+      run: |
+        echo "Running with the following input:"
+        echo "${{ toJSON(github.event.inputs) }}"
+
     - uses: actions/checkout@v3
 
     - name: Azure Login
@@ -71,11 +76,11 @@ jobs:
         az storage account create --name ${{ env.terraform-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Standard_LRS --location ${{  github.event.inputs.location }} --min-tls-version TLS1_2
         az storage container create --name ${{ env.terraform-container-name }} --account-name ${{ env.terraform-storage-account }}  --resource-group ${{ env.runner-resource-group }}
 
-    - name: Checkout virtual environments at latest official ${{ env.image-display-name }} -tag ${{ github.event.inputs.location }}
+    - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag  ${{ github.event.inputs.virtual-environments-tag }}
       if: github.event.inputs.build-image
       shell: pwsh
       run: |
-        ./scripts/checkout-virtual-environments-repo.ps1 -imageDisplayName ${{ env.image-display-name }} -tag
+        ./scripts/checkout-virtual-environments-repo.ps1 -imageDisplayName ${{ env.image-display-name }} -tag ${{ github.event.inputs.virtual-environments-tag }}
 
     - name: Build image using Packer
       if: github.event.inputs.build-image
