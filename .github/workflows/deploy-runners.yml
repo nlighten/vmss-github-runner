@@ -6,6 +6,11 @@ on:
         type: boolean
         default: false
         required: true
+      virtual-environments-tag:
+        description: 'Tag from virtual environments repo?'
+        type: string
+        default: LATEST
+        required: true
       location:
         description: 'Location'
         type: choice
@@ -38,7 +43,6 @@ env:
   image-display-name: ubuntu20
   image-template-path: ./virtual-environments/images/linux/ubuntu2004.json
 
-
 name: vmss-self-hosted-runners
 jobs:
   build-runner-image:
@@ -67,11 +71,11 @@ jobs:
         az storage account create --name ${{ env.terraform-storage-account }} --resource-group ${{ env.runner-resource-group }} --sku Standard_LRS --location ${{  github.event.inputs.location }} --min-tls-version TLS1_2
         az storage container create --name ${{ env.terraform-container-name }} --account-name ${{ env.terraform-storage-account }}  --resource-group ${{ env.runner-resource-group }}
 
-    - name: Checkout virtual environments at latest official ${{ env.image-display-name }} tag
+    - name: Checkout virtual environments at latest official ${{ env.image-display-name }} -tag ${{ github.event.inputs.location }}
       if: github.event.inputs.build-image
       shell: pwsh
       run: |
-        ./scripts/checkout-virtual-environments-repo.ps1 -ImageDisplayName ${{ env.image-display-name }}
+        ./scripts/checkout-virtual-environments-repo.ps1 -imageDisplayName ${{ env.image-display-name }} -tag
 
     - name: Build image using Packer
       if: github.event.inputs.build-image
@@ -106,23 +110,23 @@ jobs:
       id: terraform-setup
       uses: hashicorp/setup-terraform@v1
 
-    - name: Terraform Init
+    - name: Terraform init
       id: terraform-init
       run: |
         terraform -chdir=terraform init \
-            -backend-config="key=ghrunner-${{  github.event.inputs.location }}.tfstate" \
+            -backend-config="key=ghrunner-${{ github.event.inputs.location }}.tfstate" \
             -backend-config="resource_group_name=${{ env.runner-resource-group }}" \
             -backend-config="storage_account_name=${{ env.image-storage-account }}"
 
-    - name: Terraform Format
+    - name: Terraform format
       id: terraform-fmt
       run: terraform -chdir=terraform fmt -check
 
-    - name: Terraform Validate
+    - name: Terraform validate
       id: terraform-validate
       run: terraform -chdir=terraform validate
 
-    - name: Terraform Plan
+    - name: Terraform plan
       id: terraform-plan
       run: |
         terraform -chdir=terraform plan -input=false \

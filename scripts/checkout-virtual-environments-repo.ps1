@@ -3,13 +3,19 @@
 param (    
     [Parameter(Mandatory = $false)]
     [ValidateNotNullOrEmpty()]
-    [String] $ImageDisplayName = "ubuntu20"
+    [String] $ImageDisplayName,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [String] $tag
 )
 
 
 # In case of an error, display the error message and stop executing
 $ErrorActionPreference = 'Stop'
-$tag = ((Invoke-RestMethod -Uri https://actionvirtualenvironmentsstatus.azurewebsites.net/api/status).data | Where-Object {$_.DisplayName -eq $ImageDisplayName -and $_.ImageVersion -ne "" }).ImageVersion | Sort-Object | Select-Object -Last 1
+if ($tag -eq 'LATEST') {
+    $tag = ((Invoke-RestMethod -Uri https://actionvirtualenvironmentsstatus.azurewebsites.net/api/status).data | Where-Object { $_.DisplayName -eq $imageDisplayName -and $_.ImageVersion -ne "" }).ImageVersion | Sort-Object | Select-Object -Last 1
+}
 git clone https://github.com/actions/virtual-environments.git
 Set-Location -Path "virtual-environments"
-git checkout tags/$ImageDisplayName/$tag
+git checkout tags/$imageDisplayName/$tag
